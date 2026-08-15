@@ -50,6 +50,15 @@ const BRAND_PHONE = "52 951 100 2233";
 const BACKUP_FOLDER_NAME = "Respaldos CRM - Pedidos Comedor Origen";
 const MAX_BACKUPS_TO_KEEP = 12; // ~3 meses de respaldos semanales
 
+/* ==========================================================================
+   RESERVACIONES - Configuración
+   ========================================================================== */
+const RESERVATIONS_SHEET_NAME = "Reservaciones";
+const TABLES_SHEET_NAME = "Mesas";
+const RESERVATION_DURATION_MINUTES = 60; // Tiempo estimado por mesa (minutos)
+const RESERVATION_STATUSES = ["Confirmada", "Cancelada", "Completada"];
+const RESERVATION_MIN_ADVANCE_HOURS = 1; // Mínimo 1 hora de anticipación
+
 /**
  * Sanea un valor antes de escribirlo en la hoja:
  * - Convierte a texto y recorta espacios
@@ -162,6 +171,20 @@ function doGet(e) {
         .setTitle("Panel Administrativo - Comedor Origen")
         .addMetaTag("viewport", "width=device-width, initial-scale=1")
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
+
+    // Permitir solicitudes GET para obtener mesas disponibles (frontend)
+    if (e && e.parameter && e.parameter.action === "getAvailableTables") {
+      const sucursal = e.parameter.sucursal || "";
+      const fecha = e.parameter.fecha || "";
+      const hora = e.parameter.hora || "";
+      const resultado = getAvailableTables(sucursal, fecha, hora);
+
+      // Devolver directamente el resultado sin envolver en buildResponse
+      // porque el frontend espera { success: true, mesas: [...] }
+      return ContentService.createTextOutput(
+        JSON.stringify(resultado),
+      ).setMimeType(ContentService.MimeType.JSON);
     }
 
     if (!e || !e.parameter) {
@@ -761,10 +784,6 @@ function logout(token) {
  * Devuelve todos los pedidos (más recientes primero), con filtros opcionales.
  * filtros = { estado, fechaDesde, fechaHasta, busqueda }
  */
-/**
- * Devuelve la lista de sucursales configuradas (para poblar filtros y
- * selects del panel administrativo).
- */
 function adminGetSucursales(token) {
   validateToken_(token);
   return SUCURSALES;
@@ -1351,10 +1370,713 @@ function handleRegistrarVisita(data) {
   return buildResponse({ message: "Visita registrada" }, true);
 }
 
+/* ==========================================================================
+   RESERVACIONES - Funciones de Backend
+   ========================================================================== */
+
 /**
- * Manejador unico de peticiones POST (pedidos y registro de visitas).
- * El cliente siempre envia: { action: "...", data: {...} }
+ * Obtiene o crea la hoja de Reservaciones
  */
+function getReservationsSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(RESERVATIONS_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(RESERVATIONS_SHEET_NAME);
+    const headers = [
+      "ID",
+      "Sucursal",
+      "Cliente",
+      "Telefono",
+      "Fecha",
+      "Hora",
+      "Mesa",
+      "Capacidad",
+      "Personas",
+      "Estado",
+      "Notas",
+      "Timestamp",
+      "TiempoEstimado",
+      "HoraLiberacion",
+    ];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+
+  return sheet;
+}
+
+/**
+ * Obtiene o crea la hoja de Mesas (configuración por sucursal)
+ */
+function getTablesSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(TABLES_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(TABLES_SHEET_NAME);
+    const headers = ["Sucursal", "Mesa", "Capacidad", "Activa"];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+
+    // Datos de ejemplo para las sucursales
+    const mesasEjemplo = [
+      ["Centro Histórico", "Mesa 1", 2, true],
+      ["Centro Histórico", "Mesa 2", 2, true],
+      ["Centro Histórico", "Mesa 3", 4, true],
+      ["Centro Histórico", "Mesa 4", 4, true],
+      ["Centro Histórico", "Mesa 5", 6, true],
+      ["Centro Histórico", "Mesa 6", 8, true],
+      ["Reforma", "Mesa 1", 2, true],
+      ["Reforma", "Mesa 2", 4, true],
+      ["Reforma", "Mesa 3", 4, true],
+      ["Reforma", "Mesa 4", 6, true],
+    ];
+    if (mesasEjemplo.length > 0) {
+      sheet
+        .getRange(2, 1, mesasEjemplo.length, mesasEjemplo[0].length)
+        .setValues(mesasEjemplo);
+    }
+  }
+
+  return sheet;
+}
+
+/**
+ * Verifica si una mesa está disponible en una fecha y hora específicas
+ */
+function verificarDisponibilidadMesa(sucursal, mesa, fecha, hora, excluirId) {
+  const sheet = getReservationsSheet_();
+  const values = sheet.getDataRange().getValues();
+
+  const horaDate = new Date(fecha + "T" + hora);
+  if (isNaN(horaDate.getTime())) {
+    return {
+      disponible: false,
+      mensaje: "Fecha u hora inválida",
+      reservacionExistente: null,
+    };
+  }
+
+  const ahora = new Date();
+  const diffHoras = (horaDate.getTime() - ahora.getTime()) / (1000 * 60 * 60);
+  if (diffHoras < RESERVATION_MIN_ADVANCE_HOURS) {
+    return {
+      disponible: false,
+      mensaje: `Las reservaciones deben hacerse con al menos ${RESERVATION_MIN_ADVANCE_HOURS} hora de anticipación`,
+      reservacionExistente: null,
+    };
+  }
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const id = String(row[0] || "");
+    const rowSucursal = String(row[1] || "");
+    const rowMesa = String(row[6] || "");
+    const rowEstado = String(row[9] || "");
+    const rowFecha = String(row[4] || "");
+    const rowHora = String(row[5] || "");
+    const rowHoraLiberacion = row[13];
+
+    if (excluirId && id === excluirId) continue;
+    if (rowEstado !== "Confirmada") continue;
+    if (rowSucursal !== sucursal || rowMesa !== mesa) continue;
+    if (rowFecha !== fecha) continue;
+
+    const reservaHora = new Date(rowFecha + "T" + rowHora);
+    if (isNaN(reservaHora.getTime())) continue;
+
+    const diffMinutos =
+      (horaDate.getTime() - reservaHora.getTime()) / (1000 * 60);
+    const duracionReserva = row[12] || RESERVATION_DURATION_MINUTES;
+
+    if (Math.abs(diffMinutos) < duracionReserva) {
+      const horaLiberacion = rowHoraLiberacion
+        ? new Date(rowHoraLiberacion)
+        : null;
+      let mensaje = `La mesa ya está reservada`;
+      if (horaLiberacion) {
+        const liberacionStr = Utilities.formatDate(
+          horaLiberacion,
+          Session.getScriptTimeZone(),
+          "HH:mm",
+        );
+        mensaje += ` (se libera aproximadamente a las ${liberacionStr} hrs)`;
+      }
+      return {
+        disponible: false,
+        mensaje: mensaje,
+        reservacionExistente: {
+          id: id,
+          cliente: String(row[2] || ""),
+          hora: rowHora,
+          horaLiberacion: horaLiberacion,
+        },
+      };
+    }
+  }
+
+  return {
+    disponible: true,
+    mensaje: "Mesa disponible",
+    reservacionExistente: null,
+  };
+}
+
+/**
+ * Obtiene la configuración de mesas para una sucursal
+ */
+function obtenerMesasConfiguracion_(sucursal) {
+  const sheet = getTablesSheet_();
+  const values = sheet.getDataRange().getValues();
+  const mesas = [];
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const rowSucursal = String(row[0] || "").trim();
+    if (rowSucursal !== sucursal) continue;
+
+    mesas.push({
+      nombre: String(row[1] || ""),
+      capacidad: Number(row[2]) || 2,
+      activa: row[3] === true || row[3] === "TRUE",
+    });
+  }
+
+  return mesas;
+}
+
+/**
+ * Obtiene todas las mesas de una sucursal con su estado de disponibilidad
+ */
+function obtenerMesasConDisponibilidad(sucursal, fecha, hora) {
+  let mesas = obtenerMesasConfiguracion_(sucursal);
+
+  // Si no hay mesas configuradas, usar mesas por defecto
+  if (mesas.length === 0) {
+    const mesasDefault = [
+      { nombre: "Mesa 1", capacidad: 2, activa: true },
+      { nombre: "Mesa 2", capacidad: 2, activa: true },
+      { nombre: "Mesa 3", capacidad: 4, activa: true },
+      { nombre: "Mesa 4", capacidad: 4, activa: true },
+      { nombre: "Mesa 5", capacidad: 6, activa: true },
+      { nombre: "Mesa 6", capacidad: 8, activa: true },
+    ];
+    mesas = mesasDefault;
+  }
+
+  // Filtrar mesas activas
+  mesas = mesas.filter((m) => m.activa);
+
+  // Verificar disponibilidad de cada mesa
+  const resultado = mesas.map((mesa) => {
+    const disponibilidad = verificarDisponibilidadMesa(
+      sucursal,
+      mesa.nombre,
+      fecha,
+      hora,
+    );
+    return {
+      nombre: mesa.nombre,
+      capacidad: mesa.capacidad,
+      disponible: disponibilidad.disponible,
+      mensaje: disponibilidad.mensaje,
+      reservacionExistente: disponibilidad.reservacionExistente,
+      horaLiberacion: disponibilidad.reservacionExistente
+        ? disponibilidad.reservacionExistente.horaLiberacion
+        : null,
+    };
+  });
+
+  // Ordenar: disponibles primero, luego por capacidad
+  resultado.sort((a, b) => {
+    if (a.disponible && !b.disponible) return -1;
+    if (!a.disponible && b.disponible) return 1;
+    return a.capacidad - b.capacidad;
+  });
+
+  return resultado;
+}
+
+/**
+ * Endpoint para obtener mesas disponibles (GET y POST)
+ */
+function getAvailableTables(sucursal, fecha, hora) {
+  if (!sucursal || !fecha || !hora) {
+    return {
+      success: false,
+      error: "Faltan parámetros: sucursal, fecha y hora son requeridos",
+    };
+  }
+
+  try {
+    const mesas = obtenerMesasConDisponibilidad(sucursal, fecha, hora);
+    return { success: true, mesas: mesas };
+  } catch (error) {
+    console.error("Error al obtener mesas:", error);
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * Crea una nueva reservación
+ */
+function crearReservacion(data) {
+  const required = [
+    "sucursal",
+    "cliente",
+    "telefono",
+    "fecha",
+    "hora",
+    "mesa",
+    "personas",
+  ];
+  const missing = required.filter(
+    (field) => !data[field] || data[field].trim() === "",
+  );
+
+  if (missing.length > 0) {
+    return { success: false, error: `Faltan campos: ${missing.join(", ")}` };
+  }
+
+  const sucursal = data.sucursal.trim();
+  const mesa = data.mesa.trim();
+  const fecha = data.fecha.trim();
+  const hora = data.hora.trim();
+  const personas = Number(data.personas) || 1;
+  const notas = (data.notas || "").trim();
+  const cliente = data.cliente.trim();
+  const telefono = data.telefono.trim();
+
+  if (!isValidPhone(telefono)) {
+    return {
+      success: false,
+      error: "El teléfono debe tener entre 10 y 15 dígitos",
+    };
+  }
+
+  const fechaHora = new Date(fecha + "T" + hora);
+  if (isNaN(fechaHora.getTime())) {
+    return { success: false, error: "Fecha u hora inválida" };
+  }
+
+  const ahora = new Date();
+  if (fechaHora.getTime() < ahora.getTime()) {
+    return {
+      success: false,
+      error: "No se pueden hacer reservaciones en el pasado",
+    };
+  }
+
+  const diffHoras = (fechaHora.getTime() - ahora.getTime()) / (1000 * 60 * 60);
+  if (diffHoras < RESERVATION_MIN_ADVANCE_HOURS) {
+    return {
+      success: false,
+      error: `Las reservaciones deben hacerse con al menos ${RESERVATION_MIN_ADVANCE_HOURS} hora de anticipación`,
+    };
+  }
+
+  const disponibilidad = verificarDisponibilidadMesa(
+    sucursal,
+    mesa,
+    fecha,
+    hora,
+  );
+  if (!disponibilidad.disponible) {
+    return { success: false, error: disponibilidad.mensaje };
+  }
+
+  const mesas = obtenerMesasConfiguracion_(sucursal);
+  const mesaConfig = mesas.find((m) => m.nombre === mesa);
+  if (!mesaConfig) {
+    return { success: false, error: "La mesa no existe en esta sucursal" };
+  }
+
+  if (personas > mesaConfig.capacidad) {
+    return {
+      success: false,
+      error: `La mesa tiene capacidad para ${mesaConfig.capacidad} personas`,
+    };
+  }
+
+  const fechaLiberacion = new Date(
+    fechaHora.getTime() + RESERVATION_DURATION_MINUTES * 60 * 1000,
+  );
+  const horaLiberacionStr = Utilities.formatDate(
+    fechaLiberacion,
+    Session.getScriptTimeZone(),
+    "yyyy-MM-dd HH:mm:ss",
+  );
+
+  const id = Utilities.getUuid();
+
+  const sheet = getReservationsSheet_();
+  const rowData = [
+    id,
+    sucursal,
+    cliente,
+    "'" + telefono,
+    fecha,
+    hora,
+    mesa,
+    mesaConfig.capacidad,
+    personas,
+    "Confirmada",
+    notas,
+    new Date().toISOString(),
+    RESERVATION_DURATION_MINUTES,
+    horaLiberacionStr,
+  ];
+
+  sheet.appendRow(rowData);
+
+  try {
+    enviarNotificacionReservacion(
+      cliente,
+      telefono,
+      sucursal,
+      mesa,
+      fecha,
+      hora,
+      personas,
+    );
+  } catch (e) {
+    console.error("Error al enviar notificación de reservación:", e);
+  }
+
+  return {
+    success: true,
+    mensaje: "Reservación creada exitosamente",
+    id: id,
+    data: {
+      cliente,
+      sucursal,
+      mesa,
+      fecha,
+      hora,
+      personas,
+      capacidad: mesaConfig.capacidad,
+      horaLiberacion: horaLiberacionStr,
+    },
+  };
+}
+
+/**
+ * Envía notificación por correo de una nueva reservación
+ */
+function enviarNotificacionReservacion(
+  cliente,
+  telefono,
+  sucursal,
+  mesa,
+  fecha,
+  hora,
+  personas,
+) {
+  const emailDestino = "juanposicionsatelital@gmail.com";
+
+  const asunto = `📅 Nueva Reservación - ${sucursal}: ${cliente} - ${fecha}`;
+
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px;">
+      <h2 style="color: #2c3e50; border-bottom: 2px solid #c23b68; padding-bottom: 8px;">Nueva Reservación de Mesa</h2>
+      <p>Se ha registrado una nueva reservación:</p>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Sucursal:</td><td style="padding: 8px;"><strong>${sucursal}</strong></td></tr>
+        <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Cliente:</td><td style="padding: 8px;">${cliente}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Teléfono:</td><td style="padding: 8px;">${telefono}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Mesa:</td><td style="padding: 8px;"><strong>${mesa}</strong></td></tr>
+        <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Fecha:</td><td style="padding: 8px;">${fecha}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Hora:</td><td style="padding: 8px;">${hora} hrs</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Personas:</td><td style="padding: 8px;">${personas}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Duración estimada:</td><td style="padding: 8px;">${RESERVATION_DURATION_MINUTES} minutos</td></tr>
+      </table>
+    </div>
+  `;
+
+  MailApp.sendEmail({
+    to: emailDestino,
+    subject: asunto,
+    htmlBody: htmlBody,
+  });
+}
+
+/**
+ * Handler para crear reservación desde POST
+ */
+function handleCrearReservacion(data) {
+  const resultado = crearReservacion(data);
+  if (resultado.success) {
+    return buildResponse(resultado, true);
+  } else {
+    return buildResponse({ error: resultado.error }, false);
+  }
+}
+
+/* ==========================================================================
+   FUNCIONES ADMIN - RESERVACIONES
+   ========================================================================== */
+
+/**
+ * Obtiene todas las reservaciones para el panel admin
+ */
+function adminGetReservations(token, filtros) {
+  validateToken_(token);
+  filtros = filtros || {};
+
+  const sheet = getReservationsSheet_();
+  const values = sheet.getDataRange().getValues();
+  const reservaciones = [];
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    if (!row[0]) continue;
+
+    const reserva = {
+      id: String(row[0]),
+      sucursal: String(row[1] || ""),
+      cliente: String(row[2] || ""),
+      telefono: String(row[3] || ""),
+      fecha: String(row[4] || ""),
+      hora: String(row[5] || ""),
+      mesa: String(row[6] || ""),
+      capacidad: Number(row[7]) || 0,
+      personas: Number(row[8]) || 0,
+      estado: String(row[9] || "Confirmada"),
+      notas: String(row[10] || ""),
+      timestamp: row[11],
+      tiempoEstimado: Number(row[12]) || RESERVATION_DURATION_MINUTES,
+      horaLiberacion: row[13],
+      rowIndex: i + 1,
+    };
+
+    if (
+      filtros.sucursal &&
+      filtros.sucursal !== "all" &&
+      reserva.sucursal !== filtros.sucursal
+    )
+      continue;
+    if (
+      filtros.estado &&
+      filtros.estado !== "all" &&
+      reserva.estado !== filtros.estado
+    )
+      continue;
+    if (filtros.fecha && reserva.fecha !== filtros.fecha) continue;
+    if (filtros.busqueda) {
+      const q = String(filtros.busqueda).toLowerCase();
+      const haystack = (
+        reserva.cliente +
+        " " +
+        reserva.telefono +
+        " " +
+        reserva.mesa
+      ).toLowerCase();
+      if (!haystack.includes(q)) continue;
+    }
+
+    reservaciones.push(reserva);
+  }
+
+  reservaciones.sort((a, b) => {
+    const fechaA = new Date(a.fecha + "T" + a.hora);
+    const fechaB = new Date(b.fecha + "T" + b.hora);
+    return fechaA - fechaB;
+  });
+
+  return reservaciones;
+}
+
+/**
+ * Actualiza el estado de una reservación
+ */
+function adminActualizarReservacion(token, id, nuevoEstado) {
+  validateToken_(token);
+
+  if (RESERVATION_STATUSES.indexOf(nuevoEstado) === -1) {
+    throw new Error("Estado no válido");
+  }
+
+  const sheet = getReservationsSheet_();
+  const values = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === String(id)) {
+      sheet.getRange(i + 1, 10).setValue(nuevoEstado);
+      return {
+        success: true,
+        mensaje: `Reservación actualizada a ${nuevoEstado}`,
+      };
+    }
+  }
+
+  throw new Error("No se encontró la reservación");
+}
+
+/**
+ * Libera una mesa manualmente (marcar como completada)
+ */
+function adminLiberarMesa(token, id) {
+  validateToken_(token);
+
+  const sheet = getReservationsSheet_();
+  const values = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === String(id)) {
+      sheet.getRange(i + 1, 10).setValue("Completada");
+      return { success: true, mensaje: "Mesa liberada correctamente" };
+    }
+  }
+
+  throw new Error("No se encontró la reservación");
+}
+
+/* ==========================================================================
+   FUNCIONES PÚBLICAS PARA CONFIGURACIÓN Y PRUEBAS
+   ========================================================================== */
+
+/**
+ * FUNCIÓN PÚBLICA: Crea la hoja de Reservaciones
+ * Ejecutar desde el editor de Apps Script
+ */
+function crearHojaReservaciones() {
+  try {
+    const sheet = getReservationsSheet_();
+    Logger.log("✅ Hoja 'Reservaciones' creada/verificada correctamente");
+    Logger.log(`📊 Filas: ${sheet.getLastRow()}`);
+    return "Hoja 'Reservaciones' lista";
+  } catch (error) {
+    Logger.log("❌ Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * FUNCIÓN PÚBLICA: Crea la hoja de Mesas con datos de ejemplo
+ * Ejecutar desde el editor de Apps Script
+ */
+function crearHojaMesas() {
+  try {
+    const sheet = getTablesSheet_();
+    Logger.log("✅ Hoja 'Mesas' creada/verificada correctamente");
+    Logger.log(`📊 Mesas configuradas: ${sheet.getLastRow() - 1}`);
+
+    // Mostrar las mesas configuradas
+    const values = sheet.getDataRange().getValues();
+    for (let i = 1; i < values.length; i++) {
+      Logger.log(
+        `  🪑 ${values[i][0]} - ${values[i][1]} (Cap: ${values[i][2]})`,
+      );
+    }
+    return "Hoja 'Mesas' lista";
+  } catch (error) {
+    Logger.log("❌ Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * FUNCIÓN PÚBLICA: Prueba completa del sistema de reservaciones
+ * Ejecutar desde el editor de Apps Script
+ */
+function probarReservaciones() {
+  try {
+    Logger.log("=== 🧪 INICIANDO PRUEBA DE RESERVACIONES ===");
+
+    // 1. Verificar hojas
+    Logger.log("📋 Verificando hoja de Reservaciones...");
+    const resSheet = getReservationsSheet_();
+    Logger.log(`   ✅ Reservaciones: ${resSheet.getLastRow()} filas`);
+
+    Logger.log("📋 Verificando hoja de Mesas...");
+    const tablesSheet = getTablesSheet_();
+    Logger.log(
+      `   ✅ Mesas: ${tablesSheet.getLastRow() - 1} mesas configuradas`,
+    );
+
+    // 2. Probar disponibilidad con datos de ejemplo
+    Logger.log("🔍 Probando disponibilidad de mesas...");
+    const resultado = obtenerMesasConDisponibilidad(
+      "Centro Histórico",
+      "2026-08-16",
+      "14:00",
+    );
+    Logger.log(`   ✅ ${resultado.length} mesas encontradas`);
+    resultado.forEach((m) => {
+      Logger.log(
+        `   🪑 ${m.nombre} (Cap: ${m.capacidad}) → ${m.disponible ? "✅ Disponible" : "❌ Reservada"}`,
+      );
+    });
+
+    Logger.log("=== ✅ PRUEBA COMPLETADA ===");
+    return "Prueba completada exitosamente";
+  } catch (error) {
+    Logger.log("❌ Error en prueba:", error);
+    throw error;
+  }
+}
+
+/**
+ * FUNCIÓN PÚBLICA: Limpia todas las reservaciones (para pruebas)
+ * ⚠️ SOLO USAR EN ENTORNO DE PRUEBAS
+ */
+function limpiarReservaciones() {
+  const confirmacion = Browser.msgBox(
+    "⚠️ ADVERTENCIA",
+    "¿Estás seguro de que quieres ELIMINAR TODAS las reservaciones?\nEsta acción NO se puede deshacer.",
+    Browser.Buttons.YES_NO,
+  );
+
+  if (confirmacion === "yes") {
+    const sheet = getReservationsSheet_();
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      sheet.deleteRows(2, lastRow - 1);
+      Logger.log(`🗑️ Eliminadas ${lastRow - 1} reservaciones`);
+      return "Reservaciones eliminadas";
+    } else {
+      Logger.log("ℹ️ No había reservaciones para eliminar");
+      return "No había reservaciones";
+    }
+  }
+  return "Operación cancelada";
+}
+
+/**
+ * FUNCIÓN PÚBLICA: Muestra el estado actual de las reservaciones
+ * Ejecutar desde el editor de Apps Script
+ */
+function verReservaciones() {
+  try {
+    const sheet = getReservationsSheet_();
+    const values = sheet.getDataRange().getValues();
+
+    if (values.length <= 1) {
+      Logger.log("ℹ️ No hay reservaciones registradas");
+      return "No hay reservaciones";
+    }
+
+    Logger.log(`📊 ${values.length - 1} reservaciones encontradas:`);
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      Logger.log(
+        `  🪑 ${row[6]} | ${row[2]} | ${row[4]} ${row[5]} | ${row[9]}`,
+      );
+    }
+    return `Mostradas ${values.length - 1} reservaciones`;
+  } catch (error) {
+    Logger.log("❌ Error:", error);
+    throw error;
+  }
+}
+
+/* ==========================================================================
+   Manejador único de peticiones POST
+   ========================================================================== */
+
 function doPost(e) {
   try {
     const contents = JSON.parse(e.postData.contents);
@@ -1366,6 +2088,8 @@ function doPost(e) {
         return handleCrearPedido(data);
       case "registrarVisita":
         return handleRegistrarVisita(data);
+      case "crearReservacion":
+        return handleCrearReservacion(data);
       default:
         return buildResponse({ error: "Accion no valida: " + action }, false);
     }

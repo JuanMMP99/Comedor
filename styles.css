@@ -27,14 +27,33 @@ body {
   background-color: var(--paper);
 }
 
-.font-serif { font-family: 'Fraunces', serif; }
-.font-mono { font-family: 'IBM Plex Mono', monospace; }
+.font-serif {
+  font-family: 'Fraunces', serif;
+}
 
-.bg-light-pink { background-color: var(--accent-soft) !important; }
-.text-brand { color: var(--accent) !important; }
-.bg-brand-pink { background-color: var(--accent) !important; }
-.border-pink { border-color: var(--line) !important; }
-.text-brand-muted { color: var(--muted) !important; }
+.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.bg-light-pink {
+  background-color: var(--accent-soft) !important;
+}
+
+.text-brand {
+  color: var(--accent) !important;
+}
+
+.bg-brand-pink {
+  background-color: var(--accent) !important;
+}
+
+.border-pink {
+  border-color: var(--line) !important;
+}
+
+.text-brand-muted {
+  color: var(--muted) !important;
+}
 
 /* Precios: siempre en monoespaciada, como una comanda */
 .fw-bold.text-brand,
@@ -53,6 +72,7 @@ body {
   transition: all 0.25s ease;
   border-radius: 4px;
 }
+
 .btn-brand:hover,
 .btn-soft-pink:hover {
   background-color: var(--accent);
@@ -64,6 +84,7 @@ body {
   color: var(--ink) !important;
   border-radius: 4px;
 }
+
 .btn-outline-brand:hover {
   background-color: var(--ink);
   color: var(--white) !important;
@@ -77,11 +98,17 @@ body {
   overflow: hidden;
   background-color: var(--white);
 }
+
 .product-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 10px 22px rgba(28, 26, 23, 0.08);
 }
-.product-card img { height: 220px; object-fit: cover; filter: saturate(1.02); }
+
+.product-card img {
+  height: 220px;
+  object-fit: cover;
+  filter: saturate(1.02);
+}
 
 /* Puntos / lealtad */
 .points-card-image img {
@@ -90,6 +117,7 @@ body {
   object-fit: cover;
   filter: grayscale(0.15);
 }
+
 .points-badge {
   position: absolute;
   top: 15px;
@@ -102,6 +130,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.3px;
 }
+
 .points-formula-box {
   border: 1px solid var(--line) !important;
 }
@@ -111,6 +140,7 @@ body {
   display: block;
   min-height: 400px;
 }
+
 .icon-square {
   width: 52px;
   height: 52px;
@@ -121,8 +151,13 @@ body {
   border: 1px solid var(--line);
 }
 
-.form-range::-webkit-slider-thumb { background: var(--ink); }
-.form-range::-moz-range-thumb { background: var(--ink); }
+.form-range::-webkit-slider-thumb {
+  background: var(--ink);
+}
+
+.form-range::-moz-range-thumb {
+  background: var(--ink);
+}
 
 /* Widget WhatsApp (se mantiene su color de marca oficial, es reconocible) */
 .whatsapp-widget-container {
@@ -134,6 +169,7 @@ body {
   flex-direction: column;
   align-items: flex-end;
 }
+
 .whatsapp-btn {
   background-color: #25d366;
   color: white;
@@ -148,6 +184,7 @@ body {
   font-weight: 600;
   box-shadow: 0 6px 20px rgba(37, 211, 102, 0.3);
 }
+
 .wa-popup {
   width: 320px;
   background-color: var(--paper);
@@ -157,14 +194,49 @@ body {
   display: none;
   border: 1px solid var(--line);
 }
-.wa-popup.show { display: block; }
-.wa-popup-header { background-color: var(--ink); color: white; padding: 15px; }
-.wa-avatar { width: 36px; height: 36px; background-color: rgba(255,255,255,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-.wa-bubble { background-color: white; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; margin: 15px; }
+
+.wa-popup.show {
+  display: block;
+}
+
+.wa-popup-header {
+  background-color: var(--ink);
+  color: white;
+  padding: 15px;
+}
+
+.wa-avatar {
+  width: 36px;
+  height: 36px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.wa-bubble {
+  background-color: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  margin: 15px;
+}
 
 @media (max-width: 768px) {
-  .whatsapp-btn .btn-text { display: none !important; }
-  .whatsapp-btn { width: 56px; height: 56px; padding: 0; justify-content: center; border-radius: 50%; }
+  .whatsapp-btn .btn-text {
+    display: none !important;
+  }
+
+  .whatsapp-btn {
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
 }
 
 /* ==========================================================================
@@ -177,7 +249,10 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
-.tracking-widest { letter-spacing: 2.5px; font-size: 0.85rem; }
+.tracking-widest {
+  letter-spacing: 2.5px;
+  font-size: 0.85rem;
+}
 
 .hero-title {
   font-family: 'Fraunces', serif;
@@ -196,7 +271,9 @@ body {
   color: var(--muted);
 }
 
-.hero-visual-wrapper { padding: 1rem; }
+.hero-visual-wrapper {
+  padding: 1rem;
+}
 
 .hero-main-img {
   max-height: 460px;
@@ -220,8 +297,13 @@ body {
 }
 
 @media (max-width: 991px) {
-  .hero-title { font-size: 2.1rem; }
-  .hero-main-img { max-height: 350px; }
+  .hero-title {
+    font-size: 2.1rem;
+  }
+
+  .hero-main-img {
+    max-height: 350px;
+  }
 }
 
 /* CARRITO OFFCANVAS */
@@ -230,7 +312,13 @@ body {
   padding-bottom: 12px;
   margin-bottom: 12px;
 }
-.cart-item-img { width: 65px; height: 65px; object-fit: cover; border-radius: 6px; }
+
+.cart-item-img {
+  width: 65px;
+  height: 65px;
+  object-fit: cover;
+  border-radius: 6px;
+}
 
 /* ==========================================================================
    SELECTOR DE SUCURSAL — elemento distintivo del diseño: la "comanda"
@@ -251,8 +339,14 @@ body {
   cursor: pointer;
   transition: border-color 0.2s ease;
 }
-.sucursal-indicator-pill:hover { border-color: var(--ink); }
-.sucursal-indicator-pill i { color: var(--accent); }
+
+.sucursal-indicator-pill:hover {
+  border-color: var(--ink);
+}
+
+.sucursal-indicator-pill i {
+  color: var(--accent);
+}
 
 .sucursal-modal-backdrop {
   position: fixed;
@@ -267,7 +361,11 @@ body {
   transition: opacity 0.2s ease;
   padding: 1rem;
 }
-.sucursal-modal-backdrop.show { opacity: 1; pointer-events: all; }
+
+.sucursal-modal-backdrop.show {
+  opacity: 1;
+  pointer-events: all;
+}
 
 .sucursal-modal {
   background: var(--white);
@@ -332,7 +430,11 @@ body {
   /* Línea punteada estilo comanda, como divisor entre nombre y detalle */
   position: relative;
 }
-.sucursal-option:hover { border-color: var(--ink); background-color: var(--white); }
+
+.sucursal-option:hover {
+  border-color: var(--ink);
+  background-color: var(--white);
+}
 
 .sucursal-option-name {
   font-family: 'Fraunces', serif;
@@ -340,13 +442,18 @@ body {
   font-size: 1.05rem;
   color: var(--ink);
 }
+
 .sucursal-option-address,
 .sucursal-option-hours {
   font-size: 0.82rem;
   color: var(--muted);
 }
+
 .sucursal-option-address i,
-.sucursal-option-hours i { color: var(--accent); margin-right: 4px; }
+.sucursal-option-hours i {
+  color: var(--accent);
+  margin-right: 4px;
+}
 
 /* Tarjetas de sucursal en la sección "Sucursales" de index.html */
 .sucursal-card {
@@ -355,19 +462,31 @@ body {
   overflow: hidden;
   background: var(--white);
 }
-.sucursal-card-map iframe { display: block; }
-.sucursal-card-body { padding: 1.25rem 1.5rem; }
+
+.sucursal-card-map iframe {
+  display: block;
+}
+
+.sucursal-card-body {
+  padding: 1.25rem 1.5rem;
+}
+
 .sucursal-card-title {
   font-family: 'Fraunces', serif;
   font-weight: 600;
   margin-bottom: 0.6rem;
 }
+
 .sucursal-card-line {
   font-size: 0.88rem;
   color: var(--muted);
   margin-bottom: 0.4rem;
 }
-.sucursal-card-line i { color: var(--accent); width: 18px; }
+
+.sucursal-card-line i {
+  color: var(--accent);
+  width: 18px;
+}
 
 /* Divisor punteado estilo "comanda de cocina", usado como separador de secciones */
 .ticket-divider {
@@ -380,9 +499,116 @@ body {
    HONEYPOT ANTI-SPAM (invisible para personas, visible para bots)
    ========================================================================== */
 .hp-field {
-    position: absolute;
-    left: -9999px;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* ======================================== */
+/* FLOOR PLAN - RESERVACIONES               */
+/* ======================================== */
+
+.floor-plan-preview {
+  background: #f8f5f6;
+  border-radius: 12px;
+  padding: 16px;
+  min-height: 120px;
+}
+
+.floor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.floor-table-card {
+  background: white;
+  border-radius: 10px;
+  padding: 12px 8px;
+  text-align: center;
+  border: 2px solid #e5d5dc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.floor-table-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.floor-table-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(162, 59, 35, 0.2);
+}
+
+.floor-table-card.available {
+  border-color: #4caf50;
+  background: #e8f5e9;
+}
+
+.floor-table-card.available:hover {
+  border-color: #2e7d32;
+}
+
+.floor-table-card.reserved {
+  border-color: #f44336;
+  background: #fce4ec;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.floor-table-card.reserved .table-status {
+  color: #c62828;
+}
+
+.floor-table-card.warning {
+  border-color: #ff9800;
+  background: #fff3e0;
+}
+
+.floor-table-card .table-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.floor-table-card .table-capacity {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.floor-table-card .table-status {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.floor-table-card .table-capacity i {
+  font-size: 0.7rem;
+  margin-right: 2px;
+}
+
+.floor-table-card .table-timer {
+  font-size: 0.7rem;
+  color: #c62828;
+  font-weight: 600;
+  background: rgba(198, 40, 40, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.capacity-badge {
+  display: inline-block;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 10px;
+  margin-top: 2px;
 }

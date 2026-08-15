@@ -80,9 +80,22 @@
 
         <div class="d-flex align-items-center gap-2 order-lg-last">
           <!-- INDICADOR / SELECTOR DE SUCURSAL -->
-          <button class="sucursal-indicator-pill d-none d-sm-inline-flex" id="sucursalIndicator" type="button">
+          <button
+            class="sucursal-indicator-pill d-none d-sm-inline-flex"
+            id="sucursalIndicator"
+            type="button"
+          >
             <i class="bi bi-geo-alt-fill"></i>
             <span id="sucursalIndicatorText">Elegir sucursal</span>
+          </button>
+
+          <!-- RESERVAR MESA -->
+          <button
+            class="btn btn-outline-brand position-relative rounded-circle p-2"
+            onclick="openReservationModal()"
+            style="width: 42px; height: 42px"
+          >
+            <i class="bi bi-calendar3 fs-5"></i>
           </button>
 
           <!-- BOTÓN CARRITO -->
@@ -121,9 +134,7 @@
               >
             </li>
             <li class="nav-item">
-              <a class="nav-link px-3" href="productos.html"
-                >Menú Completo</a
-              >
+              <a class="nav-link px-3" href="productos.html">Menú Completo</a>
             </li>
             <li class="nav-item">
               <a class="nav-link px-3" href="#puntos-origen">Puntos Origen</a>
@@ -132,8 +143,13 @@
               <a class="nav-link px-3" href="#sucursales">Sucursales</a>
             </li>
             <li class="nav-item d-sm-none">
-              <button class="nav-link px-3 border-0 bg-transparent text-start w-100" id="sucursalIndicatorMobile" type="button">
-                <i class="bi bi-geo-alt-fill text-brand"></i> <span id="sucursalIndicatorTextMobile">Elegir sucursal</span>
+              <button
+                class="nav-link px-3 border-0 bg-transparent text-start w-100"
+                id="sucursalIndicatorMobile"
+                type="button"
+              >
+                <i class="bi bi-geo-alt-fill text-brand"></i>
+                <span id="sucursalIndicatorTextMobile">Elegir sucursal</span>
               </button>
             </li>
           </ul>
@@ -161,8 +177,8 @@
               </h1>
 
               <p class="hero-description text-secondary my-4">
-                Cocina tradicional oaxaqueña con ingredientes frescos, todos
-                los días, en la sucursal que elijas.
+                Cocina tradicional oaxaqueña con ingredientes frescos, todos los
+                días, en la sucursal que elijas.
               </p>
 
               <div
@@ -197,9 +213,7 @@
     <section class="py-5 bg-white" id="menu">
       <div class="container py-4">
         <div class="text-center mb-5">
-          <h2 class="section-title fw-bold font-serif">
-            Destacados del Menú
-          </h2>
+          <h2 class="section-title fw-bold font-serif">Destacados del Menú</h2>
           <p class="text-muted mt-2">
             Selección especial de platillos de tu sucursal
           </p>
@@ -284,8 +298,8 @@
               </p>
               <p class="mb-0 text-muted small">
                 Eso significa que en tu siguiente compra podrás descontar
-                <strong>$5 MXN</strong> al total de tu pedido, porque cada
-                Punto Origen es igual a un peso mexicano.
+                <strong>$5 MXN</strong> al total de tu pedido, porque cada Punto
+                Origen es igual a un peso mexicano.
               </p>
             </div>
 
@@ -304,9 +318,7 @@
     <section id="sucursales" class="py-5 bg-white">
       <div class="container py-4">
         <div class="text-center mb-5">
-          <h2 class="section-title fw-bold font-serif">
-            Nuestras Sucursales
-          </h2>
+          <h2 class="section-title fw-bold font-serif">Nuestras Sucursales</h2>
           <p class="text-muted">
             Cada sucursal tiene su propio menú — elige la tuya para ordenar
           </p>
@@ -476,9 +488,7 @@
                     onchange="toggleDeliveryFields()"
                   >
                     <option value="envio">Envío a Domicilio</option>
-                    <option value="tienda">
-                      Recoger en Sucursal
-                    </option>
+                    <option value="tienda">Recoger en Sucursal</option>
                   </select>
                 </div>
                 <div class="col-md-6">
@@ -592,6 +602,214 @@
       </div>
     </div>
 
+    <!-- MODAL RESERVACIÓN -->
+    <div
+      class="modal fade"
+      id="reservationModal"
+      tabindex="-1"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header bg-light-pink">
+            <h5
+              class="modal-title fw-bold text-brand d-flex align-items-center gap-2"
+            >
+              <i class="bi bi-calendar-check"></i> Reservar Mesa
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Cerrar"
+            ></button>
+          </div>
+
+          <div class="modal-body p-4">
+            <form id="reservationForm" novalidate>
+              <!-- Campo honeypot anti-spam -->
+              <div class="hp-field" aria-hidden="true">
+                <label for="resWebsite">Deja este campo vacío</label>
+                <input
+                  type="text"
+                  id="resWebsite"
+                  name="resWebsite"
+                  tabindex="-1"
+                  autocomplete="off"
+                />
+              </div>
+
+              <!-- 1. Selección de Sucursal -->
+              <h6 class="fw-bold mb-3 border-bottom pb-2">
+                <i class="bi bi-geo-alt text-brand me-1"></i> 1. Elige tu
+                sucursal
+              </h6>
+              <div class="mb-4">
+                <select class="form-select" id="resSucursal" required>
+                  <option value="">Selecciona una sucursal...</option>
+                </select>
+              </div>
+
+              <!-- 2. Mapa de Mesas (estilo TouchBistro) -->
+              <h6 class="fw-bold mb-3 border-bottom pb-2">
+                <i class="bi bi-grid-3x3-gap-fill text-brand me-1"></i> 2.
+                Selecciona tu mesa
+              </h6>
+
+              <!-- Leyenda de colores -->
+              <div class="d-flex gap-3 mb-3 flex-wrap">
+                <span class="small d-flex align-items-center gap-1">
+                  <span
+                    class="d-inline-block rounded-circle"
+                    style="width: 14px; height: 14px; background: #4caf50"
+                  ></span>
+                  Disponible
+                </span>
+                <span class="small d-flex align-items-center gap-1">
+                  <span
+                    class="d-inline-block rounded-circle"
+                    style="width: 14px; height: 14px; background: #f44336"
+                  ></span>
+                  Reservada
+                </span>
+              </div>
+
+              <!-- Floor Plan - Vista de mesas -->
+              <div class="floor-plan-preview mb-4" id="resFloorPreview">
+                <div class="text-center text-muted py-4" id="resFloorLoading">
+                  <div
+                    class="spinner-border spinner-border-sm text-brand me-2"
+                    role="status"
+                  ></div>
+                  Cargando disponibilidad de mesas...
+                </div>
+                <div class="d-none" id="resFloorGrid">
+                  <!-- Renderizado dinámico desde JavaScript -->
+                </div>
+              </div>
+
+              <!-- Selector de Mesa (fallback) -->
+              <div class="mb-4">
+                <label class="form-label"
+                  >O selecciona desde la lista
+                  <span class="text-muted small">(opcional)</span></label
+                >
+                <select class="form-select" id="resMesaSelect">
+                  <option value="">— Elige una mesa —</option>
+                </select>
+                <small class="text-muted" id="resMesaInfo"></small>
+              </div>
+
+              <!-- 3. Datos del Cliente -->
+              <h6 class="fw-bold mb-3 border-bottom pb-2">
+                <i class="bi bi-person text-brand me-1"></i> 3. Tus datos
+              </h6>
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  <label class="form-label">Nombre completo *</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="resCliente"
+                    required
+                    placeholder="Ej. Juan Pérez"
+                  />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Teléfono / WhatsApp *</label>
+                  <input
+                    type="tel"
+                    class="form-control"
+                    id="resTelefono"
+                    required
+                    placeholder="Ej. 951 123 4567"
+                  />
+                </div>
+              </div>
+
+              <!-- 4. Fecha y Hora -->
+              <h6 class="fw-bold mb-3 border-bottom pb-2">
+                <i class="bi bi-clock text-brand me-1"></i> 4. Fecha y hora
+              </h6>
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  <label class="form-label">Fecha *</label>
+                  <input
+                    type="date"
+                    class="form-control"
+                    id="resFecha"
+                    required
+                  />
+                  <small class="text-muted">Hoy o en adelante</small>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Hora *</label>
+                  <input
+                    type="time"
+                    class="form-control"
+                    id="resHora"
+                    required
+                  />
+                  <small class="text-muted"
+                    >Apertura: 9:00 AM · Cierre: 9:00 PM</small
+                  >
+                </div>
+              </div>
+
+              <!-- 5. Personas y Notas -->
+              <h6 class="fw-bold mb-3 border-bottom pb-2">
+                <i class="bi bi-people text-brand me-1"></i> 5. Detalles
+                adicionales
+              </h6>
+              <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                  <label class="form-label">Número de personas *</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="resPersonas"
+                    min="1"
+                    max="20"
+                    value="2"
+                    required
+                  />
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label">Notas especiales</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="resNotas"
+                    placeholder="Ej. mesa cerca de la ventana, celebración..."
+                  />
+                </div>
+              </div>
+
+              <!-- Botón de envío -->
+              <div class="d-grid gap-2 mt-4">
+                <button
+                  type="submit"
+                  id="resSubmitBtn"
+                  class="btn btn-brand py-3 text-uppercase fw-bold d-flex align-items-center justify-content-center gap-2"
+                >
+                  <span
+                    id="resSubmitSpinner"
+                    class="spinner-border spinner-border-sm d-none"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  <span id="resSubmitText"
+                    ><i class="bi bi-check-circle me-2"></i>Confirmar
+                    Reservación</span
+                  >
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <footer class="bg-white pt-5 pb-4 border-top">
       <div class="container text-center text-muted small">
         &copy; 2026 Comedor Origen. Oaxaca de Juárez, Oax.
@@ -606,12 +824,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
       // El botón de sucursal del menú móvil abre el mismo modal que la pastilla de escritorio
-      document.addEventListener('DOMContentLoaded', () => {
-        const mobileBtn = document.getElementById('sucursalIndicatorMobile');
-        if (mobileBtn) mobileBtn.addEventListener('click', () => openSucursalModal());
-        document.addEventListener('click', () => {
-          const t = document.getElementById('sucursalIndicatorTextMobile');
-          const s = document.getElementById('sucursalIndicatorText');
+      document.addEventListener("DOMContentLoaded", () => {
+        const mobileBtn = document.getElementById("sucursalIndicatorMobile");
+        if (mobileBtn)
+          mobileBtn.addEventListener("click", () => openSucursalModal());
+        document.addEventListener("click", () => {
+          const t = document.getElementById("sucursalIndicatorTextMobile");
+          const s = document.getElementById("sucursalIndicatorText");
           if (t && s) t.innerText = s.innerText;
         });
       });
