@@ -1,0 +1,1117 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Administrativo - Comedor Origen</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary-color: #1c1a17;
+      --primary-hover: #a23b23;
+      --secondary-color: #1c1a17;
+      --accent-bg: #f4e8e2;
+      --soft-bg: #fafaf7;
+      --danger: #dc3545;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--soft-bg);
+      margin: 0;
+      color: var(--secondary-color);
+    }
+    .hidden { display: none !important; }
+
+    /* ---------- LOGIN ---------- */
+    #loginScreen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: linear-gradient(160deg, #fff 0%, var(--accent-bg) 100%);
+    }
+    .login-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 40px 32px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(194,59,104,0.12);
+    }
+    .login-card i.bi-flower1 { font-size: 2.5rem; color: var(--primary-color); }
+    .login-card h1 { font-size: 1.4rem; font-weight: 800; margin: 10px 0 2px; }
+    .login-card .subtitle { color: #786f73; font-size: 0.9rem; margin-bottom: 24px; }
+    .form-group { text-align: left; margin-bottom: 14px; }
+    .form-group label { font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; display: block; }
+    .form-control, .form-select {
+      border-radius: 10px;
+      border: 1px solid #e5d5dc;
+      padding: 10px 12px;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(194,59,104,0.12);
+    }
+    .btn-primary {
+      background-color: var(--primary-color);
+      border: none;
+      width: 100%;
+      padding: 11px;
+      border-radius: 10px;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+    .btn-primary:hover { background-color: var(--primary-hover); }
+    .btn-outline {
+      border: 1px solid var(--primary-color);
+      color: var(--primary-color);
+      background: transparent;
+      border-radius: 10px;
+      padding: 10px;
+      font-weight: 600;
+    }
+    .btn-outline:hover { background: var(--accent-bg); }
+    .login-divider { margin: 16px 0; color: #b5a5ac; font-size: 0.8rem; }
+    .login-error { color: var(--danger); font-size: 0.85rem; margin-top: 10px; min-height: 18px; }
+
+    /* ---------- APP SHELL ---------- */
+    .mobile-topbar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+      padding: 14px 18px;
+      border-bottom: 1px solid #eee;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; color: var(--primary-color); }
+    .brand i { font-size: 1.3rem; }
+    .menu-toggle { background: none; border: none; font-size: 1.4rem; color: var(--secondary-color); }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 29;
+    }
+    .sidebar-overlay.show { display: block; }
+
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 240px;
+      background: #fff;
+      border-right: 1px solid #eee;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      z-index: 30;
+    }
+    .sidebar nav { display: flex; flex-direction: column; gap: 4px; margin-top: 30px; flex-grow: 1; }
+    .nav-btn {
+      display: flex; align-items: center; gap: 10px;
+      background: none; border: none;
+      text-align: left; padding: 11px 14px;
+      border-radius: 10px; font-weight: 600;
+      color: #786f73; font-size: 0.92rem;
+    }
+    .nav-btn i { font-size: 1.05rem; }
+    .nav-btn:hover { background: var(--accent-bg); color: var(--primary-color); }
+    .nav-btn.active { background: var(--primary-color); color: #fff; }
+    .sidebar-footer { border-top: 1px solid #eee; padding-top: 16px; }
+    .sidebar-user { font-size: 0.78rem; color: #b5a5ac; margin-bottom: 8px; }
+    .sidebar-user strong { display: block; color: var(--secondary-color); font-size: 0.9rem; }
+    .btn-sm.btn-outline { padding: 7px; font-size: 0.82rem; }
+
+    .main-content { margin-left: 240px; padding: 32px; min-height: 100vh; }
+    .page-title { font-weight: 800; font-size: 1.5rem; margin-bottom: 2px; }
+    .page-subtitle { color: #786f73; font-size: 0.9rem; margin-bottom: 24px; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ---------- CARDS / STATS ---------- */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: #fff; border-radius: 16px; padding: 20px;
+      border: 1px solid #f0e2e7;
+    }
+    .stat-card .stat-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--accent-bg); color: var(--primary-color);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px; font-size: 1.1rem;
+    }
+    .stat-card .stat-value { font-size: 1.5rem; font-weight: 800; }
+    .stat-card .stat-label { font-size: 0.8rem; color: #786f73; }
+
+    .card-box { background: #fff; border-radius: 16px; padding: 20px; border: 1px solid #f0e2e7; margin-bottom: 20px; }
+    .card-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 14px; }
+
+    .breakdown-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5eef1; font-size: 0.88rem; }
+    .breakdown-row:last-child { border-bottom: none; }
+    .badge-pill { background: var(--accent-bg); color: var(--primary-color); padding: 2px 10px; border-radius: 20px; font-weight: 700; font-size: 0.78rem; }
+
+    /* ---------- TABLE ---------- */
+    .table-wrap { background: #fff; border-radius: 16px; border: 1px solid #f0e2e7; overflow: hidden; }
+    table.data-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    table.data-table th {
+      background: var(--soft-bg); text-align: left; padding: 12px 14px;
+      font-weight: 700; color: #786f73; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    table.data-table td { padding: 12px 14px; border-top: 1px solid #f5eef1; vertical-align: middle; }
+    table.data-table tr:hover td { background: #fffafb; }
+
+    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
+    .status-Pendiente { background: #fff3cd; color: #997404; }
+    .status-Confirmado { background: #cfe2ff; color: #084298; }
+    .status-En.preparación, .status-En-preparación { background: #e0cffc; color: #59359a; }
+    .status-En.camino, .status-En-camino { background: #d1f0ff; color: #0a6ea0; }
+    .status-Entregado { background: #d4edda; color: #146c43; }
+    .status-Cancelado { background: #f8d7da; color: #b02a37; }
+
+    .filters-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .filters-bar .form-control, .filters-bar .form-select { max-width: 220px; font-size: 0.85rem; }
+
+    .icon-btn {
+      background: none; border: none; color: #786f73; padding: 5px 7px; border-radius: 6px; font-size: 0.95rem;
+    }
+    .icon-btn:hover { background: var(--accent-bg); color: var(--primary-color); }
+    .icon-btn.danger:hover { background: #fde8ea; color: var(--danger); }
+
+    .empty-state { text-align: center; padding: 50px 20px; color: #b5a5ac; }
+    .empty-state i { font-size: 2.2rem; margin-bottom: 10px; display: block; }
+
+    /* ---------- FORM AGENDAR ---------- */
+    .form-section-title { font-weight: 700; font-size: 0.9rem; margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #f0e2e7; }
+    .product-line { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .product-line select { flex: 2; }
+    .product-line input { flex: 1; }
+    .btn-add-line { border: 1px dashed var(--primary-color); color: var(--primary-color); background: none; border-radius: 10px; padding: 8px; width: 100%; font-size: 0.85rem; font-weight: 600; }
+
+    /* ---------- MODAL DETALLE ---------- */
+    .detail-modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 50;
+      align-items: center; justify-content: center; padding: 16px;
+    }
+    .detail-modal-backdrop.show { display: flex; }
+    .detail-modal { background: #fff; border-radius: 16px; max-width: 480px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; }
+    .detail-modal h4 { font-weight: 800; margin-bottom: 4px; }
+    .detail-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f5eef1; font-size: 0.87rem; }
+    .detail-row span:first-child { color: #786f73; }
+    .detail-row span:last-child { font-weight: 600; text-align: right; }
+
+    /* ---------- TOASTS ---------- */
+    #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 60; display: flex; flex-direction: column; gap: 10px; max-width: 320px; }
+    .toast-item { background: var(--secondary-color); color: #fff; padding: 12px 16px; border-radius: 12px; font-size: 0.86rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: slideIn 0.25s ease; }
+    .toast-item.error { background: var(--danger); }
+    .toast-item.success { background: var(--primary-color); }
+    @keyframes slideIn { from { transform: translateY(-16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    @media (max-width: 900px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
+      .sidebar.open { transform: translateX(0); }
+      .main-content { margin-left: 0; padding: 20px 16px; }
+      .mobile-topbar { display: flex; }
+    }
+    @media (max-width: 560px) {
+      .stats-row { grid-template-columns: 1fr; }
+      .filters-bar .form-control, .filters-bar .form-select { max-width: 100%; flex: 1; }
+      table.data-table { font-size: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===================== LOGIN ===================== -->
+  <div id="loginScreen">
+    <div class="login-card">
+      <i class="bi bi-flower1"></i>
+      <h1>Panel Administrativo</h1>
+      <p class="subtitle">Inicia sesión para gestionar tus pedidos</p>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginEmail">Correo electrónico</label>
+          <input type="email" id="loginEmail" class="form-control" placeholder="nombre@ejemplo.com" required autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Contraseña</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+        <button type="submit" id="loginBtn" class="btn btn-primary">
+          <span id="loginBtnText">Entrar al Sistema</span>
+        </button>
+        <div class="login-error" id="loginError"></div>
+      </form>
+
+      <div class="login-divider">O</div>
+      <button type="button" id="googleRetryBtn" class="btn btn-outline" style="width:100%">
+        <i class="bi bi-google"></i> Continuar con Google
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================== APP SHELL ===================== -->
+  <div id="appShell" class="hidden">
+
+    <!-- TOPBAR MÓVIL -->
+    <header class="mobile-topbar">
+      <div class="brand">
+        <i class="bi bi-flower1"></i>
+        <span>Panel Origen</span>
+      </div>
+      <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú">
+        <i class="bi bi-list"></i>
+      </button>
+    </header>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <i class="bi bi-flower1"></i>
+        <span>Panel Origen</span>
+      </div>
+
+      <nav>
+        <button class="nav-btn active" data-tab="dashboard">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </button>
+        <button class="nav-btn" data-tab="pedidos">
+          <i class="bi bi-bag-check"></i> Pedidos
+        </button>
+        <button class="nav-btn" data-tab="agendar">
+          <i class="bi bi-plus-circle"></i> Agendar Pedido
+        </button>
+        <button class="nav-btn" data-tab="clientes">
+          <i class="bi bi-people"></i> Clientes
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          Usuario activo
+          <strong id="sidebarUserName">—</strong>
+        </div>
+        <button class="btn btn-outline btn-sm" id="logoutBtn" style="width:100%">
+          <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- DASHBOARD -->
+      <section class="panel active" data-panel="dashboard">
+        <h2 class="page-title">Dashboard</h2>
+        <p class="page-subtitle">Resumen general de pedidos y ventas</p>
+
+        <div class="filters-bar" style="max-width:320px">
+          <select class="form-select" id="dashSucursalFiltro">
+            <option value="all">Todas las sucursales</option>
+          </select>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-bag-check"></i></div>
+            <div class="stat-value" id="statTotal">—</div>
+            <div class="stat-label">Pedidos totales</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
+            <div class="stat-value" id="statVentas">—</div>
+            <div class="stat-label">Ventas totales</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-truck"></i></div>
+            <div class="stat-value" id="statEntregasHoy">—</div>
+            <div class="stat-label">Entregas hoy</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon"><i class="bi bi-calendar-week"></i></div>
+            <div class="stat-value" id="statVentasSemana">—</div>
+            <div class="stat-label">Ventas esta semana</div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card-box">
+              <h3>Por sucursal</h3>
+              <div id="breakdownSucursal"></div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card-box">
+              <h3>Por estatus</h3>
+              <div id="breakdownEstado"></div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card-box">
+              <h3>Por modalidad de entrega</h3>
+              <div id="breakdownTipo"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-box">
+          <h3>Respaldo de la base de datos</h3>
+          <p class="text-muted small mb-2" id="backupInfo">Cargando información de respaldo…</p>
+          <button class="btn btn-outline btn-sm" id="btnForzarRespaldo">
+            <i class="bi bi-cloud-download"></i> Generar respaldo ahora
+          </button>
+        </div>
+      </section>
+
+      <!-- PEDIDOS -->
+      <section class="panel" data-panel="pedidos">
+        <h2 class="page-title">Pedidos</h2>
+        <p class="page-subtitle">Consulta, filtra y actualiza el estatus de cada pedido</p>
+
+        <div class="filters-bar">
+          <input type="text" class="form-control" id="filtroBusqueda" placeholder="Buscar cliente o teléfono…" />
+          <select class="form-select" id="filtroSucursal">
+            <option value="all">Todas las sucursales</option>
+          </select>
+          <select class="form-select" id="filtroEstado">
+            <option value="all">Todos los estatus</option>
+          </select>
+          <input type="date" class="form-control" id="filtroFechaDesde" title="Entrega desde" />
+          <input type="date" class="form-control" id="filtroFechaHasta" title="Entrega hasta" />
+          <button class="btn btn-outline btn-sm" id="btnLimpiarFiltros">Limpiar</button>
+        </div>
+
+        <div class="table-wrap">
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Sucursal</th>
+                  <th>Entrega</th>
+                  <th>Modalidad</th>
+                  <th>Total</th>
+                  <th>Estatus</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="pedidosTableBody"></tbody>
+            </table>
+          </div>
+          <div class="empty-state hidden" id="pedidosEmptyState">
+            <i class="bi bi-inbox"></i>
+            No hay pedidos que coincidan con los filtros.
+          </div>
+        </div>
+      </section>
+
+      <!-- AGENDAR PEDIDO -->
+      <section class="panel" data-panel="agendar">
+        <h2 class="page-title">Agendar pedido</h2>
+        <p class="page-subtitle">Registra un pedido tomado por teléfono o en tienda</p>
+
+        <div class="card-box" style="max-width:640px">
+          <form id="agendarForm">
+            <div class="form-section-title">Sucursal y datos del cliente</div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label small fw-bold">Sucursal *</label>
+                <select class="form-select" id="agSucursal" required>
+                  <option value="">Selecciona una sucursal…</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Nombre completo *</label>
+                <input type="text" class="form-control" id="agCliente" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Teléfono *</label>
+                <input type="tel" class="form-control" id="agTelefono" placeholder="10 dígitos" required />
+              </div>
+            </div>
+
+            <div class="form-section-title">Productos</div>
+            <div id="agProductLines"></div>
+            <button type="button" class="btn-add-line" id="btnAddProductLine">
+              <i class="bi bi-plus-lg"></i> Agregar producto
+            </button>
+
+            <div class="form-section-title">Modalidad y pago</div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Tipo de entrega *</label>
+                <select class="form-select" id="agTipoEntrega" required>
+                  <option value="envio">Envío a domicilio</option>
+                  <option value="tienda">Recoger en tienda</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Método de pago *</label>
+                <select class="form-select" id="agMetodoPago" required>
+                  <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+                  <option value="Efectivo">Efectivo</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="agEnvioFields">
+              <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                  <label class="form-label small fw-bold">Nombre de quien recibe</label>
+                  <input type="text" class="form-control" id="agDestinatario" />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-bold">Teléfono de quien recibe</label>
+                  <input type="tel" class="form-control" id="agTelefonoDestinatario" />
+                </div>
+                <div class="col-12">
+                  <label class="form-label small fw-bold">Dirección</label>
+                  <input type="text" class="form-control" id="agDireccion" />
+                </div>
+                <div class="col-12">
+                  <label class="form-label small fw-bold">Referencias</label>
+                  <input type="text" class="form-control" id="agReferencias" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section-title">Entrega y dedicatoria</div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Fecha de entrega *</label>
+                <input type="date" class="form-control" id="agFecha" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Hora de entrega *</label>
+                <input type="time" class="form-control" id="agHora" required />
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-bold">Dedicatoria</label>
+                <textarea class="form-control" id="agDedicatoria" rows="2"></textarea>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-4">
+              <div class="fw-bold">Total: <span id="agTotalPreview" class="text-brand">$0 MXN</span></div>
+              <button type="submit" class="btn btn-primary" style="width:auto" id="agSubmitBtn">
+                <i class="bi bi-check-circle"></i> Registrar pedido
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- CLIENTES -->
+      <section class="panel" data-panel="clientes">
+        <h2 class="page-title">Directorio de Clientes</h2>
+        <p class="page-subtitle">Clientes derivados del historial de pedidos, separados por sucursal</p>
+
+        <div class="filters-bar" style="max-width:320px">
+          <select class="form-select" id="filtroClienteSucursal">
+            <option value="all">Todas las sucursales</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Teléfono</th>
+                  <th>Sucursal</th>
+                  <th>Pedidos</th>
+                  <th>Total gastado</th>
+                  <th>Puntos</th>
+                  <th>Último pedido</th>
+                </tr>
+              </thead>
+              <tbody id="clientesTableBody"></tbody>
+            </table>
+          </div>
+          <div class="empty-state hidden" id="clientesEmptyState">
+            <i class="bi bi-people"></i>
+            Aún no hay clientes registrados.
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL DETALLE DE PEDIDO -->
+  <div class="detail-modal-backdrop" id="detailModalBackdrop">
+    <div class="detail-modal">
+      <h4 id="detailCliente">—</h4>
+      <p class="text-muted small mb-3" id="detailUuid"></p>
+
+      <div id="detailBody"></div>
+
+      <div class="form-group mt-3">
+        <label class="small fw-bold">Cambiar estatus</label>
+        <select class="form-select" id="detailEstadoSelect"></select>
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" id="btnGuardarEstado" style="flex:1">Guardar estatus</button>
+        <button class="btn btn-outline" id="btnExportarPDF"><i class="bi bi-file-earmark-pdf"></i></button>
+        <button class="btn btn-outline" id="btnCerrarDetalle" style="color:#786f73;border-color:#e5d5dc"><i class="bi bi-x-lg"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer"></div>
+
+  <script>
+    /* ==========================================================================
+       ESTADO GLOBAL
+       ========================================================================== */
+    let sessionToken = null;
+    let currentUser = null;
+    const ESTADOS = ['Pendiente', 'Confirmado', 'En preparación', 'En camino', 'Entregado', 'Cancelado'];
+    let pedidosCache = [];
+    let selectedUuid = null;
+
+    // Catálogo simplificado para el formulario de agendar (reflejo de catalog.js del sitio público)
+    // Si agregas/quitas productos en catalog.js, actualiza también esta lista.
+    const PRODUCTOS_RAPIDOS = [
+      { id: 'manual', name: 'Producto personalizado / a cotizar', price: 0 }
+    ];
+
+    /* ==========================================================================
+       UTILIDADES
+       ========================================================================== */
+    function showToast(message, type) {
+      const container = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      el.className = 'toast-item ' + (type || '');
+      el.innerText = message;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 4500);
+    }
+
+    function money(n) {
+      return '$' + (Number(n) || 0).toLocaleString('es-MX') + ' MXN';
+    }
+
+    function gasCall(fnName, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler((err) => reject(err))
+          [fnName](...args);
+      });
+    }
+
+    /* ==========================================================================
+       LOGIN
+       ========================================================================== */
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('loginBtnText');
+      const errorEl = document.getElementById('loginError');
+
+      errorEl.innerText = '';
+      btn.disabled = true;
+      btnText.innerText = 'Entrando…';
+
+      try {
+        const res = await gasCall('loginWithPassword', email, password);
+        sessionToken = res.token;
+        currentUser = res;
+        onLoginSuccess();
+      } catch (err) {
+        errorEl.innerText = (err && err.message) || 'Correo o contraseña incorrectos';
+      } finally {
+        btn.disabled = false;
+        btnText.innerText = 'Entrar al Sistema';
+      }
+    });
+
+    document.getElementById('googleRetryBtn').addEventListener('click', checkGoogleAutoLogin);
+
+    async function checkGoogleAutoLogin() {
+      try {
+        const res = await gasCall('checkGoogleSession');
+        if (res.authenticated) {
+          sessionToken = res.token;
+          currentUser = res;
+          onLoginSuccess();
+        }
+      } catch (err) { /* silencioso: se queda en pantalla de login */ }
+    }
+
+    function onLoginSuccess() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appShell').classList.remove('hidden');
+      document.getElementById('sidebarUserName').innerText = currentUser.nombre || currentUser.email;
+      initApp();
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await gasCall('logout', sessionToken);
+      sessionToken = null;
+      currentUser = null;
+      document.getElementById('appShell').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
+    });
+
+    /* ==========================================================================
+       NAVEGACIÓN
+       ========================================================================== */
+    function initApp() {
+      document.querySelectorAll('.nav-btn').forEach((btn) => {
+        btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+      });
+
+      document.getElementById('menuToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('show');
+      });
+      document.getElementById('sidebarOverlay').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').classList.remove('show');
+      });
+
+      populateEstadoSelects();
+      loadSucursalesEnUI();
+      setupPedidosFilters();
+      setupAgendarForm();
+      setupDetailModal();
+
+      document.getElementById('dashSucursalFiltro').addEventListener('change', loadDashboard);
+      document.getElementById('filtroClienteSucursal').addEventListener('change', loadClientes);
+
+      loadDashboard();
+      loadPedidos();
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.nav-btn').forEach((b) => b.classList.toggle('active', b.getAttribute('data-tab') === tab));
+      document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('active', p.getAttribute('data-panel') === tab));
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('show');
+
+      if (tab === 'dashboard') loadDashboard();
+      if (tab === 'pedidos') loadPedidos();
+      if (tab === 'clientes') loadClientes();
+    }
+
+    function populateEstadoSelects() {
+      const filtroEstado = document.getElementById('filtroEstado');
+      const detailEstado = document.getElementById('detailEstadoSelect');
+      ESTADOS.forEach((estado) => {
+        filtroEstado.innerHTML += `<option value="${estado}">${estado}</option>`;
+        detailEstado.innerHTML += `<option value="${estado}">${estado}</option>`;
+      });
+    }
+
+    let sucursalesCache = [];
+
+    async function loadSucursalesEnUI() {
+      try {
+        sucursalesCache = await gasCall('adminGetSucursales', sessionToken);
+        const selectsConTodas = ['filtroSucursal', 'dashSucursalFiltro', 'filtroClienteSucursal'];
+        selectsConTodas.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          sucursalesCache.forEach((s) => {
+            el.innerHTML += `<option value="${s.nombre}">${s.nombre}</option>`;
+          });
+        });
+
+        const agSucursal = document.getElementById('agSucursal');
+        if (agSucursal) {
+          sucursalesCache.forEach((s) => {
+            agSucursal.innerHTML += `<option value="${s.nombre}">${s.nombre}</option>`;
+          });
+        }
+      } catch (err) {
+        showToast('Error al cargar sucursales: ' + err.message, 'error');
+      }
+    }
+
+    /* ==========================================================================
+       DASHBOARD
+       ========================================================================== */
+    async function loadDashboard() {
+      try {
+        const sucursalFiltro = document.getElementById('dashSucursalFiltro').value;
+        const data = await gasCall('adminGetDashboard', sessionToken, sucursalFiltro);
+        document.getElementById('statTotal').innerText = data.total;
+        document.getElementById('statVentas').innerText = money(data.ventasTotales);
+        document.getElementById('statEntregasHoy').innerText = data.entregasHoy;
+        document.getElementById('statVentasSemana').innerText = money(data.ventasSemana);
+
+        const sucursalEl = document.getElementById('breakdownSucursal');
+        sucursalEl.innerHTML = Object.keys(data.porSucursal || {}).length
+          ? Object.entries(data.porSucursal).map(([k, v]) => `
+              <div class="breakdown-row"><span>${k}</span><span class="badge-pill">${v.pedidos} pedidos · ${money(v.ventas)}</span></div>
+            `).join('')
+          : '<p class="text-muted small mb-0">Sin datos aún.</p>';
+
+        const estadoEl = document.getElementById('breakdownEstado');
+        estadoEl.innerHTML = Object.keys(data.porEstado).length
+          ? Object.entries(data.porEstado).map(([k, v]) => `
+              <div class="breakdown-row"><span>${k}</span><span class="badge-pill">${v}</span></div>
+            `).join('')
+          : '<p class="text-muted small mb-0">Sin datos aún.</p>';
+
+        const tipoEl = document.getElementById('breakdownTipo');
+        const tipoLabels = { envio: 'Envío a domicilio', tienda: 'Recoger en sucursal' };
+        tipoEl.innerHTML = Object.keys(data.porTipoEntrega).length
+          ? Object.entries(data.porTipoEntrega).map(([k, v]) => `
+              <div class="breakdown-row"><span>${tipoLabels[k] || k}</span><span class="badge-pill">${v}</span></div>
+            `).join('')
+          : '<p class="text-muted small mb-0">Sin datos aún.</p>';
+
+        loadBackupInfo();
+      } catch (err) {
+        showToast('Error al cargar el dashboard: ' + err.message, 'error');
+      }
+    }
+
+    async function loadBackupInfo() {
+      try {
+        const info = await gasCall('adminGetBackupInfo', sessionToken);
+        const el = document.getElementById('backupInfo');
+        el.innerHTML = info.lastBackupDate
+          ? `Último respaldo: ${new Date(info.lastBackupDate).toLocaleString('es-MX')} — <a href="${info.lastBackupUrl}" target="_blank">ver en Drive</a>`
+          : 'Aún no se ha generado ningún respaldo.';
+      } catch (err) { /* silencioso */ }
+    }
+
+    document.getElementById('btnForzarRespaldo').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Generando…';
+      try {
+        await gasCall('adminForzarRespaldo', sessionToken);
+        showToast('Respaldo generado correctamente', 'success');
+        loadBackupInfo();
+      } catch (err) {
+        showToast('Error al generar respaldo: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-download"></i> Generar respaldo ahora';
+      }
+    });
+
+    /* ==========================================================================
+       PEDIDOS
+       ========================================================================== */
+    function setupPedidosFilters() {
+      let debounceTimer;
+      const debouncedLoad = () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(loadPedidos, 300);
+      };
+      document.getElementById('filtroBusqueda').addEventListener('input', debouncedLoad);
+      document.getElementById('filtroSucursal').addEventListener('change', loadPedidos);
+      document.getElementById('filtroEstado').addEventListener('change', loadPedidos);
+      document.getElementById('filtroFechaDesde').addEventListener('change', loadPedidos);
+      document.getElementById('filtroFechaHasta').addEventListener('change', loadPedidos);
+      document.getElementById('btnLimpiarFiltros').addEventListener('click', () => {
+        document.getElementById('filtroBusqueda').value = '';
+        document.getElementById('filtroSucursal').value = 'all';
+        document.getElementById('filtroEstado').value = 'all';
+        document.getElementById('filtroFechaDesde').value = '';
+        document.getElementById('filtroFechaHasta').value = '';
+        loadPedidos();
+      });
+    }
+
+    async function loadPedidos() {
+      const filtros = {
+        busqueda: document.getElementById('filtroBusqueda').value.trim(),
+        sucursal: document.getElementById('filtroSucursal').value,
+        estado: document.getElementById('filtroEstado').value,
+        fechaDesde: document.getElementById('filtroFechaDesde').value,
+        fechaHasta: document.getElementById('filtroFechaHasta').value
+      };
+
+      try {
+        const pedidos = await gasCall('adminGetPedidos', sessionToken, filtros);
+        pedidosCache = pedidos;
+        renderPedidosTable(pedidos);
+      } catch (err) {
+        showToast('Error al cargar pedidos: ' + err.message, 'error');
+      }
+    }
+
+    function renderPedidosTable(pedidos) {
+      const body = document.getElementById('pedidosTableBody');
+      const emptyState = document.getElementById('pedidosEmptyState');
+
+      emptyState.classList.toggle('hidden', pedidos.length !== 0);
+
+      body.innerHTML = pedidos.map((p) => `
+        <tr>
+          <td>
+            <strong>${p.cliente}</strong><br>
+            <span class="text-muted small">${p.telefono}</span>
+          </td>
+          <td>${p.sucursal || '—'}</td>
+          <td>${p.fechaEntrega}<br><span class="text-muted small">${p.horaEntrega} hrs</span></td>
+          <td>${p.tipoEntrega === 'tienda' ? 'Recoger' : 'Envío'}</td>
+          <td>${money(p.total)}</td>
+          <td><span class="status-badge status-${p.estado.replace(/\\s/g, '-')}">${p.estado}</span></td>
+          <td>
+            <button class="icon-btn" onclick="openDetailModal('${p.uuid}')" title="Ver detalle"><i class="bi bi-eye"></i></button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    /* ==========================================================================
+       MODAL DE DETALLE
+       ========================================================================== */
+    function setupDetailModal() {
+      document.getElementById('btnCerrarDetalle').addEventListener('click', closeDetailModal);
+      document.getElementById('detailModalBackdrop').addEventListener('click', (e) => {
+        if (e.target.id === 'detailModalBackdrop') closeDetailModal();
+      });
+      document.getElementById('btnGuardarEstado').addEventListener('click', guardarEstadoPedido);
+      document.getElementById('btnExportarPDF').addEventListener('click', exportarPedidoPDF);
+    }
+
+    function openDetailModal(uuid) {
+      const p = pedidosCache.find((x) => x.uuid === uuid);
+      if (!p) return;
+      selectedUuid = uuid;
+
+      document.getElementById('detailCliente').innerText = p.cliente;
+      document.getElementById('detailUuid').innerText = p.telefono;
+      document.getElementById('detailEstadoSelect').value = p.estado;
+
+      const productosHtml = p.productos.map((prod) => `
+        <div class="detail-row"><span>${prod.quantity}x ${prod.name}</span><span>${money(prod.price * prod.quantity)}</span></div>
+      `).join('');
+
+      document.getElementById('detailBody').innerHTML = `
+        <div class="detail-row"><span>Sucursal</span><span>${p.sucursal || '—'}</span></div>
+        ${productosHtml}
+        <div class="detail-row"><span>Total</span><span>${money(p.total)}</span></div>
+        <div class="detail-row"><span>Puntos generados</span><span>+${p.puntos}</span></div>
+        <div class="detail-row"><span>Modalidad</span><span>${p.tipoEntrega === 'tienda' ? 'Recoger en tienda' : 'Envío a domicilio'}</span></div>
+        ${p.tipoEntrega === 'envio' ? `
+          <div class="detail-row"><span>Destinatario</span><span>${p.destinatario} (${p.telefonoDestinatario})</span></div>
+          <div class="detail-row"><span>Dirección</span><span>${p.direccion}</span></div>
+        ` : ''}
+        <div class="detail-row"><span>Método de pago</span><span>${p.metodoPago}</span></div>
+        <div class="detail-row"><span>Fecha / Hora entrega</span><span>${p.fechaEntrega} ${p.horaEntrega}</span></div>
+        <div class="detail-row"><span>Dedicatoria</span><span>${p.dedicatoria || '—'}</span></div>
+      `;
+
+      document.getElementById('detailModalBackdrop').classList.add('show');
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detailModalBackdrop').classList.remove('show');
+      selectedUuid = null;
+    }
+
+    async function guardarEstadoPedido() {
+      if (!selectedUuid) return;
+      const nuevoEstado = document.getElementById('detailEstadoSelect').value;
+      const btn = document.getElementById('btnGuardarEstado');
+      btn.disabled = true;
+
+      try {
+        await gasCall('adminActualizarEstadoPedido', sessionToken, selectedUuid, nuevoEstado);
+        showToast('Estatus actualizado', 'success');
+        closeDetailModal();
+        loadPedidos();
+        loadDashboard();
+      } catch (err) {
+        showToast('Error al actualizar: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function exportarPedidoPDF() {
+      if (!selectedUuid) return;
+      const btn = document.getElementById('btnExportarPDF');
+      btn.disabled = true;
+      try {
+        const pdf = await gasCall('adminExportPedidoPDF', sessionToken, selectedUuid);
+        const link = document.createElement('a');
+        link.href = 'data:' + pdf.mimeType + ';base64,' + pdf.base64;
+        link.download = pdf.filename;
+        link.click();
+      } catch (err) {
+        showToast('Error al generar PDF: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    /* ==========================================================================
+       AGENDAR PEDIDO (manual)
+       ========================================================================== */
+    let productLineCount = 0;
+
+    function setupAgendarForm() {
+      document.getElementById('agTipoEntrega').addEventListener('change', toggleAgEnvioFields);
+      addProductLine();
+      document.getElementById('btnAddProductLine').addEventListener('click', addProductLine);
+      document.getElementById('agendarForm').addEventListener('submit', submitAgendarForm);
+      toggleAgEnvioFields();
+    }
+
+    function toggleAgEnvioFields() {
+      const tipo = document.getElementById('agTipoEntrega').value;
+      document.getElementById('agEnvioFields').style.display = tipo === 'envio' ? 'block' : 'none';
+    }
+
+    function addProductLine() {
+      productLineCount += 1;
+      const id = 'line' + productLineCount;
+      const container = document.getElementById('agProductLines');
+      const line = document.createElement('div');
+      line.className = 'product-line';
+      line.id = id;
+      line.innerHTML = `
+        <input type="text" class="form-control" placeholder="Nombre del producto" data-role="name">
+        <input type="number" class="form-control" placeholder="Precio" min="0" data-role="price" oninput="updateAgTotalPreview()">
+        <input type="number" class="form-control" placeholder="Cant." min="1" value="1" style="max-width:70px" data-role="qty" oninput="updateAgTotalPreview()">
+        <button type="button" class="icon-btn danger" onclick="removeProductLine('${id}')"><i class="bi bi-trash"></i></button>
+      `;
+      container.appendChild(line);
+    }
+
+    function removeProductLine(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+      updateAgTotalPreview();
+    }
+
+    function readProductLines() {
+      const lines = document.querySelectorAll('#agProductLines .product-line');
+      const productos = [];
+      lines.forEach((line) => {
+        const name = line.querySelector('[data-role="name"]').value.trim();
+        const price = Number(line.querySelector('[data-role="price"]').value) || 0;
+        const qty = Number(line.querySelector('[data-role="qty"]').value) || 1;
+        if (name && price > 0) {
+          productos.push({ id: 'manual', name, price, quantity: qty });
+        }
+      });
+      return productos;
+    }
+
+    function updateAgTotalPreview() {
+      const productos = readProductLines();
+      const total = productos.reduce((acc, p) => acc + p.price * p.quantity, 0);
+      document.getElementById('agTotalPreview').innerText = money(total);
+    }
+
+    async function submitAgendarForm(e) {
+      e.preventDefault();
+      const btn = document.getElementById('agSubmitBtn');
+
+      const productos = readProductLines();
+      if (productos.length === 0) {
+        showToast('Agrega al menos un producto con nombre y precio', 'error');
+        return;
+      }
+
+      const total = productos.reduce((acc, p) => acc + p.price * p.quantity, 0);
+      const tipoEntrega = document.getElementById('agTipoEntrega').value;
+      const sucursal = document.getElementById('agSucursal').value;
+
+      if (!sucursal) {
+        showToast('Selecciona una sucursal', 'error');
+        return;
+      }
+
+      const data = {
+        cliente: document.getElementById('agCliente').value.trim(),
+        telefono: document.getElementById('agTelefono').value.trim(),
+        sucursal: sucursal,
+        tipoEntrega: tipoEntrega,
+        destinatario: document.getElementById('agDestinatario').value.trim(),
+        telefonoDestinatario: document.getElementById('agTelefonoDestinatario').value.trim(),
+        direccion: document.getElementById('agDireccion').value.trim(),
+        referencias: document.getElementById('agReferencias').value.trim(),
+        metodoPago: document.getElementById('agMetodoPago').value,
+        fechaEntrega: document.getElementById('agFecha').value,
+        horaEntrega: document.getElementById('agHora').value,
+        dedicatoria: document.getElementById('agDedicatoria').value.trim(),
+        productos: productos,
+        total: total
+      };
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Registrando…';
+
+      try {
+        await gasCall('adminCrearPedidoManual', sessionToken, data);
+        showToast('Pedido registrado correctamente', 'success');
+        document.getElementById('agendarForm').reset();
+        document.getElementById('agProductLines').innerHTML = '';
+        productLineCount = 0;
+        addProductLine();
+        toggleAgEnvioFields();
+        updateAgTotalPreview();
+        switchTab('pedidos');
+      } catch (err) {
+        showToast('Error al registrar pedido: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle"></i> Registrar pedido';
+      }
+    }
+
+    /* ==========================================================================
+       CLIENTES
+       ========================================================================== */
+    async function loadClientes() {
+      try {
+        const sucursalFiltro = document.getElementById('filtroClienteSucursal').value;
+        const clientes = await gasCall('adminGetClientes', sessionToken, sucursalFiltro);
+        const body = document.getElementById('clientesTableBody');
+        const emptyState = document.getElementById('clientesEmptyState');
+
+        emptyState.classList.toggle('hidden', clientes.length !== 0);
+
+        body.innerHTML = clientes.map((c) => `
+          <tr>
+            <td>${c.nombre}</td>
+            <td>${c.telefono}</td>
+            <td>${c.sucursal || '—'}</td>
+            <td>${c.pedidos}</td>
+            <td>${money(c.totalGastado)}</td>
+            <td>${c.puntosAcumulados}</td>
+            <td>${c.ultimoPedido}</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        showToast('Error al cargar clientes: ' + err.message, 'error');
+      }
+    }
+
+    /* ==========================================================================
+       ARRANQUE
+       ========================================================================== */
+    checkGoogleAutoLogin();
+  </script>
+</body>
+</html>

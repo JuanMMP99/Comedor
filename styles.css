@@ -1,0 +1,388 @@
+/* ==========================================================================
+   COMEDOR ORIGEN — Paleta neutra blanco/negro con un solo acento (terracota).
+   Tipografía: Fraunces (display) + Inter (texto) + IBM Plex Mono (precios,
+   como en una comanda de cocina — es el elemento distintivo del diseño).
+   ========================================================================== */
+:root {
+  --ink: #1c1a17;
+  --paper: #fafaf7;
+  --line: #e4e0d8;
+  --muted: #726c63;
+  --accent: #a23b23;
+  --accent-hover: #832d19;
+  --accent-soft: #f4e8e2;
+  --white: #ffffff;
+
+  /* Alias de compatibilidad con clases ya usadas en el HTML */
+  --brand-pink: var(--accent);
+  --brand-pink-hover: var(--accent-hover);
+  --brand-pink-soft: var(--accent-soft);
+  --dark-charcoal: var(--ink);
+  --border-pink: var(--line);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  color: var(--ink);
+  background-color: var(--paper);
+}
+
+.font-serif { font-family: 'Fraunces', serif; }
+.font-mono { font-family: 'IBM Plex Mono', monospace; }
+
+.bg-light-pink { background-color: var(--accent-soft) !important; }
+.text-brand { color: var(--accent) !important; }
+.bg-brand-pink { background-color: var(--accent) !important; }
+.border-pink { border-color: var(--line) !important; }
+.text-brand-muted { color: var(--muted) !important; }
+
+/* Precios: siempre en monoespaciada, como una comanda */
+.fw-bold.text-brand,
+.text-brand.fs-5,
+.text-brand.fs-4,
+.text-brand.fs-3 {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Botones */
+.btn-brand,
+.btn-soft-pink {
+  background-color: var(--ink);
+  color: var(--white) !important;
+  border: none;
+  transition: all 0.25s ease;
+  border-radius: 4px;
+}
+.btn-brand:hover,
+.btn-soft-pink:hover {
+  background-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.btn-outline-brand {
+  border: 1px solid var(--ink);
+  color: var(--ink) !important;
+  border-radius: 4px;
+}
+.btn-outline-brand:hover {
+  background-color: var(--ink);
+  color: var(--white) !important;
+}
+
+/* Tarjetas de producto/platillo */
+.product-card {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  overflow: hidden;
+  background-color: var(--white);
+}
+.product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgba(28, 26, 23, 0.08);
+}
+.product-card img { height: 220px; object-fit: cover; filter: saturate(1.02); }
+
+/* Puntos / lealtad */
+.points-card-image img {
+  height: 420px;
+  width: 100%;
+  object-fit: cover;
+  filter: grayscale(0.15);
+}
+.points-badge {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background-color: var(--ink);
+  color: white;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  border-radius: 20px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.points-formula-box {
+  border: 1px solid var(--line) !important;
+}
+
+/* Mapa e Iconos */
+.map-frame-wrapper iframe {
+  display: block;
+  min-height: 400px;
+}
+.icon-square {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--paper) !important;
+  border: 1px solid var(--line);
+}
+
+.form-range::-webkit-slider-thumb { background: var(--ink); }
+.form-range::-moz-range-thumb { background: var(--ink); }
+
+/* Widget WhatsApp (se mantiene su color de marca oficial, es reconocible) */
+.whatsapp-widget-container {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.whatsapp-btn {
+  background-color: #25d366;
+  color: white;
+  border: none;
+  height: 56px;
+  padding: 0 20px;
+  border-radius: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.3);
+}
+.wa-popup {
+  width: 320px;
+  background-color: var(--paper);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 15px;
+  display: none;
+  border: 1px solid var(--line);
+}
+.wa-popup.show { display: block; }
+.wa-popup-header { background-color: var(--ink); color: white; padding: 15px; }
+.wa-avatar { width: 36px; height: 36px; background-color: rgba(255,255,255,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.wa-bubble { background-color: white; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; margin: 15px; }
+
+@media (max-width: 768px) {
+  .whatsapp-btn .btn-text { display: none !important; }
+  .whatsapp-btn { width: 56px; height: 56px; padding: 0; justify-content: center; border-radius: 50%; }
+}
+
+/* ==========================================================================
+   HERO
+   ========================================================================== */
+.hero-clean-section {
+  background: var(--paper);
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.tracking-widest { letter-spacing: 2.5px; font-size: 0.85rem; }
+
+.hero-title {
+  font-family: 'Fraunces', serif;
+  font-size: 2.85rem;
+  line-height: 1.15;
+  letter-spacing: 0.2px;
+  color: var(--ink);
+  font-weight: 600;
+  text-shadow: none !important;
+}
+
+.hero-description {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  max-width: 480px;
+  color: var(--muted);
+}
+
+.hero-visual-wrapper { padding: 1rem; }
+
+.hero-main-img {
+  max-height: 460px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.hero-bg-blob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 320px;
+  height: 320px;
+  background-color: var(--accent-soft);
+  border-radius: 50%;
+  filter: blur(50px);
+  opacity: 0.7;
+  z-index: 0;
+}
+
+@media (max-width: 991px) {
+  .hero-title { font-size: 2.1rem; }
+  .hero-main-img { max-height: 350px; }
+}
+
+/* CARRITO OFFCANVAS */
+.cart-item-card {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+.cart-item-img { width: 65px; height: 65px; object-fit: cover; border-radius: 6px; }
+
+/* ==========================================================================
+   SELECTOR DE SUCURSAL — elemento distintivo del diseño: la "comanda"
+   ========================================================================== */
+
+/* Pastilla indicadora en la navbar */
+.sucursal-indicator-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background-color: var(--paper);
+  color: var(--ink);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+.sucursal-indicator-pill:hover { border-color: var(--ink); }
+.sucursal-indicator-pill i { color: var(--accent); }
+
+.sucursal-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 26, 23, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  padding: 1rem;
+}
+.sucursal-modal-backdrop.show { opacity: 1; pointer-events: all; }
+
+.sucursal-modal {
+  background: var(--white);
+  border-radius: 10px;
+  max-width: 480px;
+  width: 100%;
+  padding: 2rem;
+  position: relative;
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px rgba(28, 26, 23, 0.25);
+}
+
+.sucursal-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.sucursal-modal-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.sucursal-modal-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.5rem;
+  margin: 0.4rem 0 0.3rem;
+}
+
+.sucursal-modal-desc {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.sucursal-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sucursal-option {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 8px;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  /* Línea punteada estilo comanda, como divisor entre nombre y detalle */
+  position: relative;
+}
+.sucursal-option:hover { border-color: var(--ink); background-color: var(--white); }
+
+.sucursal-option-name {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+.sucursal-option-address,
+.sucursal-option-hours {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.sucursal-option-address i,
+.sucursal-option-hours i { color: var(--accent); margin-right: 4px; }
+
+/* Tarjetas de sucursal en la sección "Sucursales" de index.html */
+.sucursal-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--white);
+}
+.sucursal-card-map iframe { display: block; }
+.sucursal-card-body { padding: 1.25rem 1.5rem; }
+.sucursal-card-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+.sucursal-card-line {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+.sucursal-card-line i { color: var(--accent); width: 18px; }
+
+/* Divisor punteado estilo "comanda de cocina", usado como separador de secciones */
+.ticket-divider {
+  border: none;
+  border-top: 2px dashed var(--line);
+  margin: 0;
+}
+
+/* ==========================================================================
+   HONEYPOT ANTI-SPAM (invisible para personas, visible para bots)
+   ========================================================================== */
+.hp-field {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
