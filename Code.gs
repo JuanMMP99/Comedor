@@ -557,7 +557,7 @@ function configurarUrlAdmin() {
   // 🔧 EDITA ESTE VALOR ANTES DE EJECUTAR: pega aquí la URL de tu implementación
   // dedicada al panel (la segunda que crees, distinta de la de la API pública).
   const urlDelPanelAdmin =
-    "https://script.google.com/macros/s/AKfycbycQWpXcPFtenv2bhhLCiEG1OIK8c-tfAWkbl8PVPtlFd2s4OJVNzkFDxnRtfJUbG-E/exec";
+    "https://script.google.com/macros/s/AKfycbwQlq3gyvPeJ2N1KEoslW9gTCrpwzJ_fyj6LC-lbN-etkONPQFCSH1KgeFz1BJH-T08/exec";
 
   PropertiesService.getScriptProperties().setProperty(
     "ADMIN_DEPLOYMENT_URL",
@@ -2315,17 +2315,17 @@ function adminGetMesasConfig(token) {
  */
 function adminGetAvailableHours(token, sucursal, fecha) {
   validateToken_(token);
-  return getAvailableHours(sucursal, fecha);
+  return getAvailableHours(sucursal, fecha) || [];
 }
 
 function adminGetReservationsForDay(token, sucursal, fecha) {
   validateToken_(token);
-  return getReservationsForDay(sucursal, fecha);
+  return getReservationsForDay(sucursal, fecha) || [];
 }
 
 function adminGetAvailableTablesWithHours(token, sucursal, fecha, hora) {
   validateToken_(token);
-  return getAvailableTablesWithHours(sucursal, fecha, hora);
+  return getAvailableTablesWithHours(sucursal, fecha, hora) || { success: true, mesas: [] };
 }
 
 /**
