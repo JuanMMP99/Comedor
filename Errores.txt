@@ -1,0 +1,6 @@
+Panel Admin
+	- No muestra las reservaciones
+	- No muestra a que mesa hacer la reservación en el formulario
+
+Clientes
+	- Mejorar el formulario de agendar reservaciones, mostrar las horas en botones y validad la hora segun las reservaciones con la mesa

@@ -551,25 +551,41 @@
               <h6 class="fw-bold mb-3 border-bottom pb-2">
                 4. Programación y Notas
               </h6>
+              <div class="mb-3">
+                <label class="form-label">Fecha de Entrega *</label>
+                <input
+                  type="date"
+                  class="form-control form-control-lg"
+                  id="deliveryDateInput"
+                  required
+                />
+                <input type="hidden" id="deliveryDate" />
+                <div class="small mt-1" id="deliveryDateValidez"></div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label d-block">Hora aproximada de entrega *</label>
+                <input type="hidden" id="deliveryTime" />
+                <div id="deliveryHorariosLoading" class="text-muted small d-none">
+                  Calculando horarios disponibles...
+                </div>
+                <div id="deliveryHorariosWrap" class="d-none">
+                  <div class="res-hour-group">
+                    <div class="res-hour-group-label">Mañana</div>
+                    <div class="res-hour-buttons" id="deliveryHorariosManana"></div>
+                  </div>
+                  <div class="res-hour-group">
+                    <div class="res-hour-group-label">Tarde</div>
+                    <div class="res-hour-buttons" id="deliveryHorariosTarde"></div>
+                  </div>
+                  <div class="small mt-2 text-muted" id="deliveryHorariosResumen"></div>
+                </div>
+                <div id="deliveryHorariosVacio" class="text-muted small">
+                  Elige una fecha para ver los horarios disponibles.
+                </div>
+              </div>
+
               <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                  <label class="form-label">Fecha de Entrega *</label>
-                  <input
-                    type="date"
-                    class="form-control"
-                    id="deliveryDate"
-                    required
-                  />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Hora Aproximada *</label>
-                  <input
-                    type="time"
-                    class="form-control"
-                    id="deliveryTime"
-                    required
-                  />
-                </div>
                 <div class="col-12">
                   <label class="form-label">Notas para tu pedido</label>
                   <textarea
@@ -639,170 +655,204 @@
                 />
               </div>
 
-              <!-- 1. Selección de Sucursal -->
-              <h6 class="fw-bold mb-3 border-bottom pb-2">
-                <i class="bi bi-geo-alt text-brand me-1"></i> 1. Elige tu
-                sucursal
-              </h6>
-              <div class="mb-4">
-                <select class="form-select" id="resSucursal" required>
-                  <option value="">Selecciona una sucursal...</option>
-                </select>
-              </div>
-
-              <!-- 2. Mapa de Mesas (estilo TouchBistro) -->
-              <h6 class="fw-bold mb-3 border-bottom pb-2">
-                <i class="bi bi-grid-3x3-gap-fill text-brand me-1"></i> 2.
-                Selecciona tu mesa
-              </h6>
-
-              <!-- Leyenda de colores -->
-              <div class="d-flex gap-3 mb-3 flex-wrap">
-                <span class="small d-flex align-items-center gap-1">
-                  <span
-                    class="d-inline-block rounded-circle"
-                    style="width: 14px; height: 14px; background: #4caf50"
-                  ></span>
-                  Disponible
-                </span>
-                <span class="small d-flex align-items-center gap-1">
-                  <span
-                    class="d-inline-block rounded-circle"
-                    style="width: 14px; height: 14px; background: #f44336"
-                  ></span>
-                  Reservada
-                </span>
-              </div>
-
-              <!-- Floor Plan - Vista de mesas -->
-              <div class="floor-plan-preview mb-4" id="resFloorPreview">
-                <div class="text-center text-muted py-4" id="resFloorLoading">
-                  <div
-                    class="spinner-border spinner-border-sm text-brand me-2"
-                    role="status"
-                  ></div>
-                  Cargando disponibilidad de mesas...
+              <!-- Barra de pasos -->
+              <div class="res-steps mb-4" id="resStepsBar">
+                <div class="res-step active" data-step="1">
+                  <span class="res-step-dot">1</span>
+                  <span class="res-step-label">Sucursal</span>
                 </div>
-                <div class="d-none" id="resFloorGrid">
-                  <!-- Renderizado dinámico desde JavaScript -->
+                <div class="res-step" data-step="2">
+                  <span class="res-step-dot">2</span>
+                  <span class="res-step-label">Fecha y hora</span>
+                </div>
+                <div class="res-step" data-step="3">
+                  <span class="res-step-dot">3</span>
+                  <span class="res-step-label">Mesa</span>
+                </div>
+                <div class="res-step" data-step="4">
+                  <span class="res-step-dot">4</span>
+                  <span class="res-step-label">Tus datos</span>
                 </div>
               </div>
 
-              <!-- Selector de Mesa (fallback) -->
-              <div class="mb-4">
-                <label class="form-label"
-                  >O selecciona desde la lista
-                  <span class="text-muted small">(opcional)</span></label
-                >
-                <select class="form-select" id="resMesaSelect">
-                  <option value="">— Elige una mesa —</option>
-                </select>
-                <small class="text-muted" id="resMesaInfo"></small>
-              </div>
+              <!-- Campos ocultos: guardan los valores reales que se envían -->
+              <input type="hidden" id="resFecha" />
+              <input type="hidden" id="resHora" />
+              <input type="hidden" id="resMesaSelect" />
 
-              <!-- 3. Datos del Cliente -->
-              <h6 class="fw-bold mb-3 border-bottom pb-2">
-                <i class="bi bi-person text-brand me-1"></i> 3. Tus datos
-              </h6>
-              <div class="row g-3 mb-4">
-                <div class="col-md-6">
-                  <label class="form-label">Nombre completo *</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="resCliente"
-                    required
-                    placeholder="Ej. Juan Pérez"
-                  />
+              <!-- ===================== PASO 1: SUCURSAL ===================== -->
+              <div class="res-step-panel" data-step-panel="1">
+                <h6 class="fw-bold mb-3">
+                  <i class="bi bi-geo-alt text-brand me-1"></i> ¿En qué sucursal quieres reservar?
+                </h6>
+                <div class="mb-2">
+                  <select class="form-select" id="resSucursal" required>
+                    <option value="">Selecciona una sucursal...</option>
+                  </select>
                 </div>
-                <div class="col-md-6">
-                  <label class="form-label">Teléfono / WhatsApp *</label>
-                  <input
-                    type="tel"
-                    class="form-control"
-                    id="resTelefono"
-                    required
-                    placeholder="Ej. 951 123 4567"
-                  />
+                <div class="d-grid mt-4">
+                  <button type="button" class="btn btn-brand py-2" id="resStep1Next">
+                    Continuar <i class="bi bi-arrow-right ms-1"></i>
+                  </button>
                 </div>
               </div>
 
-              <!-- 4. Fecha y Hora -->
-              <h6 class="fw-bold mb-3 border-bottom pb-2">
-                <i class="bi bi-clock text-brand me-1"></i> 4. Fecha y hora
-              </h6>
-              <div class="row g-3 mb-4">
-                <div class="col-md-6">
-                  <label class="form-label">Fecha *</label>
+              <!-- ===================== PASO 2: FECHA Y HORA ===================== -->
+              <div class="res-step-panel d-none" data-step-panel="2">
+                <h6 class="fw-bold mb-3">
+                  <i class="bi bi-calendar3 text-brand me-1"></i> Fecha de la reservación
+                </h6>
+                <div class="mb-2">
                   <input
                     type="date"
-                    class="form-control"
-                    id="resFecha"
+                    class="form-control form-control-lg"
+                    id="resFechaInput"
                     required
                   />
-                  <small class="text-muted">Hoy o en adelante</small>
                 </div>
-                <div class="col-md-6">
-                  <label class="form-label">Hora *</label>
-                  <input
-                    type="time"
-                    class="form-control"
-                    id="resHora"
-                    required
-                  />
-                  <small class="text-muted"
-                    >Apertura: 9:00 AM · Cierre: 9:00 PM</small
-                  >
+                <div class="small mb-4" id="resFechaValidez"></div>
+
+                <h6 class="fw-bold mb-3">
+                  <i class="bi bi-clock text-brand me-1"></i> Horario disponible
+                </h6>
+                <div id="resHorariosLoading" class="text-center text-muted py-3 d-none">
+                  <div class="spinner-border spinner-border-sm text-brand me-2" role="status"></div>
+                  Consultando horarios disponibles...
+                </div>
+                <div id="resHorariosWrap" class="d-none">
+                  <div class="res-hour-group" id="resHorariosManana">
+                    <div class="res-hour-group-label">Mañana</div>
+                    <div class="res-hour-buttons"></div>
+                  </div>
+                  <div class="res-hour-group" id="resHorariosTarde">
+                    <div class="res-hour-group-label">Tarde</div>
+                    <div class="res-hour-buttons"></div>
+                  </div>
+                  <div class="small mt-2" id="resHorariosResumen"></div>
+                </div>
+                <div id="resHorariosVacio" class="text-muted small d-none">
+                  Elige primero sucursal y fecha para ver los horarios disponibles.
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                  <button type="button" class="btn btn-outline-brand py-2" data-step-back="1">
+                    <i class="bi bi-arrow-left me-1"></i> Atrás
+                  </button>
+                  <button type="button" class="btn btn-brand py-2" id="resStep2Next" disabled>
+                    Continuar <i class="bi bi-arrow-right ms-1"></i>
+                  </button>
                 </div>
               </div>
 
-              <!-- 5. Personas y Notas -->
-              <h6 class="fw-bold mb-3 border-bottom pb-2">
-                <i class="bi bi-people text-brand me-1"></i> 5. Detalles
-                adicionales
-              </h6>
-              <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                  <label class="form-label">Número de personas *</label>
-                  <input
-                    type="number"
-                    class="form-control"
-                    id="resPersonas"
-                    min="1"
-                    max="20"
-                    value="2"
-                    required
-                  />
+              <!-- ===================== PASO 3: MESA ===================== -->
+              <div class="res-step-panel d-none" data-step-panel="3">
+                <h6 class="fw-bold mb-3">
+                  <i class="bi bi-grid-3x3-gap-fill text-brand me-1"></i> Elige tu mesa
+                </h6>
+
+                <div class="d-flex gap-3 mb-3 flex-wrap">
+                  <span class="small d-flex align-items-center gap-1">
+                    <span class="d-inline-block rounded-circle" style="width: 14px; height: 14px; background: #4caf50"></span>
+                    Disponible
+                  </span>
+                  <span class="small d-flex align-items-center gap-1">
+                    <span class="d-inline-block rounded-circle" style="width: 14px; height: 14px; background: #f44336"></span>
+                    Ocupada en ese horario
+                  </span>
                 </div>
-                <div class="col-md-8">
-                  <label class="form-label">Notas especiales</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="resNotas"
-                    placeholder="Ej. mesa cerca de la ventana, celebración..."
-                  />
+
+                <div class="floor-plan-preview mb-2" id="resFloorPreview">
+                  <div class="text-center text-muted py-4" id="resFloorLoading">
+                    <div class="spinner-border spinner-border-sm text-brand me-2" role="status"></div>
+                    Cargando disponibilidad de mesas...
+                  </div>
+                  <div class="d-none" id="resFloorGrid"></div>
+                </div>
+                <div class="small text-muted" id="resMesaInfo"></div>
+
+                <div class="d-flex justify-content-between mt-4">
+                  <button type="button" class="btn btn-outline-brand py-2" data-step-back="2">
+                    <i class="bi bi-arrow-left me-1"></i> Atrás
+                  </button>
+                  <button type="button" class="btn btn-brand py-2" id="resStep3Next" disabled>
+                    Continuar <i class="bi bi-arrow-right ms-1"></i>
+                  </button>
                 </div>
               </div>
 
-              <!-- Botón de envío -->
-              <div class="d-grid gap-2 mt-4">
-                <button
-                  type="submit"
-                  id="resSubmitBtn"
-                  class="btn btn-brand py-3 text-uppercase fw-bold d-flex align-items-center justify-content-center gap-2"
-                >
-                  <span
-                    id="resSubmitSpinner"
-                    class="spinner-border spinner-border-sm d-none"
-                    role="status"
-                    aria-hidden="true"
-                  ></span>
-                  <span id="resSubmitText"
-                    ><i class="bi bi-check-circle me-2"></i>Confirmar
-                    Reservación</span
+              <!-- ===================== PASO 4: DATOS DEL CLIENTE ===================== -->
+              <div class="res-step-panel d-none" data-step-panel="4">
+                <h6 class="fw-bold mb-3">
+                  <i class="bi bi-person text-brand me-1"></i> Tus datos
+                </h6>
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Nombre completo *</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="resCliente"
+                      required
+                      placeholder="Ej. Juan Pérez"
+                    />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Teléfono / WhatsApp *</label>
+                    <input
+                      type="tel"
+                      class="form-control"
+                      id="resTelefono"
+                      required
+                      placeholder="Ej. 951 123 4567"
+                    />
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Número de personas *</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="resPersonas"
+                      min="1"
+                      max="20"
+                      value="2"
+                      required
+                    />
+                  </div>
+                  <div class="col-md-8">
+                    <label class="form-label">Notas especiales</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="resNotas"
+                      placeholder="Ej. mesa cerca de la ventana, celebración..."
+                    />
+                  </div>
+                </div>
+
+                <!-- Resumen de la reservación -->
+                <div class="p-3 mb-3 rounded bg-light-pink border border-pink small" id="resResumenBox">
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                  <button type="button" class="btn btn-outline-brand py-2" data-step-back="3">
+                    <i class="bi bi-arrow-left me-1"></i> Atrás
+                  </button>
+                  <button
+                    type="submit"
+                    id="resSubmitBtn"
+                    class="btn btn-brand py-2 fw-bold d-flex align-items-center justify-content-center gap-2"
                   >
-                </button>
+                    <span
+                      id="resSubmitSpinner"
+                      class="spinner-border spinner-border-sm d-none"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
+                    <span id="resSubmitText"
+                      ><i class="bi bi-check-circle me-2"></i>Confirmar Reservación</span
+                    >
+                  </button>
+                </div>
               </div>
             </form>
           </div>

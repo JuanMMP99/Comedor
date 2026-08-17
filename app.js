@@ -114,12 +114,11 @@ function enhancePhoneInputNotice() {
   }
 }
 
-// Configura la fecha mínima de entrega = hoy
+// Configura la fecha mínima de entrega = hoy (ahora delegado al nuevo
+// selector con botones de horario; se mantiene esta función por si algún
+// otro script la invoca).
 function setMinDeliveryDate() {
-  const dateInput = document.getElementById("deliveryDate");
-  if (!dateInput) return;
-  const todayStr = new Date().toISOString().split("T")[0];
-  dateInput.setAttribute("min", todayStr);
+  setupDeliveryDateTimePicker();
 }
 
 // FUNCIONES DEL CARRITO
@@ -303,6 +302,7 @@ function openCheckoutModal() {
 
   updateTiendaOptionLabel();
   toggleDeliveryFields();
+  setupDeliveryDateTimePicker();
   if (orderModalObj) orderModalObj.show();
 }
 
@@ -343,6 +343,19 @@ function setupFormHandler() {
         "No se detectó una sucursal seleccionada. Por favor elige tu sucursal antes de continuar.",
       );
       if (typeof openSucursalModal === "function") openSucursalModal();
+      return;
+    }
+
+    // Validar fecha y hora de entrega (nuevo selector con botones)
+    const fechaEntregaVal = document.getElementById("deliveryDate")?.value;
+    const horaEntregaVal = document.getElementById("deliveryTime")?.value;
+    if (!fechaEntregaVal) {
+      alert("Elige una fecha de entrega válida.");
+      document.getElementById("deliveryDateInput")?.focus();
+      return;
+    }
+    if (!horaEntregaVal) {
+      alert("Elige un horario de entrega disponible.");
       return;
     }
 
@@ -392,6 +405,7 @@ function setupFormHandler() {
 
       // 4. Limpiar formulario y carrito
       orderForm.reset();
+      setupDeliveryDateTimePicker();
       clearCart();
     } catch (error) {
       alert(
@@ -476,63 +490,93 @@ function setupWhatsAppWidget() {
 // ==========================================================================
 // RESERVACIONES - Frontend (Modal)
 // ==========================================================================
+// RESERVACIÓN DE MESA — Formulario tipo asistente (wizard) por pasos:
+// 1) Sucursal  2) Fecha y hora  3) Mesa  4) Datos del cliente
+// ==========================================================================
 
 let reservationModal = null;
 let selectedTable = null;
+let resCurrentStep = 1;
 
 function openReservationModal() {
   const modalElem = document.getElementById("reservationModal");
-  if (!modalElem) {
-    console.warn("Modal de reservación no encontrado");
-    return;
-  }
+  if (!modalElem) return;
 
-  // Inicializar el modal si no existe
   if (!reservationModal) {
     reservationModal = new bootstrap.Modal(modalElem);
   }
 
-  // Poblar sucursales
+  // Poblar sucursales y preseleccionar la sucursal activa del cliente
   const selectSucursal = document.getElementById("resSucursal");
   if (selectSucursal && CONFIG.sucursales) {
-    selectSucursal.innerHTML = CONFIG.sucursales
-      .map((s) => `<option value="${s.nombre}">${s.nombre}</option>`)
-      .join("");
-    // Seleccionar la sucursal actual si existe
+    selectSucursal.innerHTML =
+      '<option value="">Selecciona una sucursal...</option>' +
+      CONFIG.sucursales
+        .map((s) => `<option value="${s.nombre}">${s.nombre}</option>`)
+        .join("");
+
     const actual = getSucursalActual();
     if (actual) {
       selectSucursal.value = actual.nombre;
     }
   }
 
-  // Configurar fecha mínima (hoy)
-  const fechaInput = document.getElementById("resFecha");
-  if (fechaInput) {
-    const today = new Date().toISOString().split("T")[0];
-    fechaInput.setAttribute("min", today);
-    fechaInput.value = today;
-  }
-
-  // Configurar hora por defecto (una hora después)
-  const horaInput = document.getElementById("resHora");
-  if (horaInput) {
-    const now = new Date();
-    now.setHours(now.getHours() + 1);
-    const horas = String(now.getHours()).padStart(2, "0");
-    const minutos = String(now.getMinutes()).padStart(2, "0");
-    horaInput.value = `${horas}:${minutos}`;
-  }
-
-  // Limpiar selección
+  // Reset de campos ocultos y estado
   selectedTable = null;
+  ["resFecha", "resHora", "resMesaSelect"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const mesaInfo = document.getElementById("resMesaInfo");
+  if (mesaInfo) mesaInfo.textContent = "";
 
-  // Cargar mesas disponibles
-  loadAvailableTables();
-
-  // Configurar eventos
   setupReservationEvents();
-
+  goToResStep(1);
   reservationModal.show();
+}
+
+function goToResStep(step) {
+  resCurrentStep = step;
+
+  document.querySelectorAll(".res-step-panel").forEach((panel) => {
+    panel.classList.toggle(
+      "d-none",
+      Number(panel.getAttribute("data-step-panel")) !== step,
+    );
+  });
+
+  document.querySelectorAll(".res-step").forEach((el) => {
+    const n = Number(el.getAttribute("data-step"));
+    el.classList.toggle("active", n === step);
+    el.classList.toggle("done", n < step);
+  });
+
+  if (step === 4) {
+    renderResSummary();
+  }
+
+  // Al abrir el paso, hacer scroll al inicio del modal-body
+  const body = document.querySelector("#reservationModal .modal-body");
+  if (body) body.scrollTop = 0;
+}
+
+function renderResSummary() {
+  const box = document.getElementById("resResumenBox");
+  if (!box) return;
+  const sucursal = document.getElementById("resSucursal")?.value || "—";
+  const fecha = document.getElementById("resFecha")?.value || "—";
+  const hora = document.getElementById("resHora")?.value || "—";
+  const mesa = selectedTable ? selectedTable.nombre : "—";
+  const cap = selectedTable ? selectedTable.capacidad : null;
+
+  box.innerHTML = `
+    <div class="d-flex justify-content-between flex-wrap gap-1">
+      <span><i class="bi bi-geo-alt text-brand me-1"></i>${sucursal}</span>
+      <span><i class="bi bi-calendar3 text-brand me-1"></i>${fecha}</span>
+      <span><i class="bi bi-clock text-brand me-1"></i>${hora} hrs</span>
+      <span><i class="bi bi-grid-3x3-gap-fill text-brand me-1"></i>Mesa ${mesa}${cap ? ` (cap. ${cap})` : ""}</span>
+    </div>
+  `;
 }
 
 function setupReservationEvents() {
@@ -544,16 +588,212 @@ function setupReservationEvents() {
     newForm.addEventListener("submit", submitReservation);
   }
 
-  // Eventos para refrescar mesas
-  const sucursalSelect = document.getElementById("resSucursal");
-  const fechaInput = document.getElementById("resFecha");
-  const horaInput = document.getElementById("resHora");
+  // --- Paso 1: sucursal ---
+  const step1Next = document.getElementById("resStep1Next");
+  if (step1Next) {
+    step1Next.onclick = () => {
+      const sucursal = document.getElementById("resSucursal")?.value;
+      if (!sucursal) {
+        alert("Selecciona una sucursal para continuar");
+        return;
+      }
+      setupResFechaInput();
+      goToResStep(2);
+    };
+  }
 
-  [sucursalSelect, fechaInput, horaInput].forEach((el) => {
-    if (el) {
-      el.addEventListener("change", loadAvailableTables);
-    }
+  // --- Botones "Atrás" ---
+  document.querySelectorAll("[data-step-back]").forEach((btn) => {
+    btn.onclick = () => {
+      const target = Number(btn.getAttribute("data-step-back"));
+      goToResStep(target);
+    };
   });
+
+  // --- Paso 2: fecha + hora ---
+  const fechaInput = document.getElementById("resFechaInput");
+  if (fechaInput) {
+    fechaInput.addEventListener("change", onResFechaChange);
+  }
+
+  const step2Next = document.getElementById("resStep2Next");
+  if (step2Next) {
+    step2Next.onclick = () => {
+      const hora = document.getElementById("resHora")?.value;
+      if (!hora) {
+        alert("Selecciona un horario disponible para continuar");
+        return;
+      }
+      selectedTable = null;
+      goToResStep(3);
+      loadAvailableTables();
+    };
+  }
+
+  // --- Paso 3: mesa ---
+  const step3Next = document.getElementById("resStep3Next");
+  if (step3Next) {
+    step3Next.onclick = () => {
+      if (!selectedTable) {
+        alert("Selecciona una mesa disponible para continuar");
+        return;
+      }
+      goToResStep(4);
+    };
+  }
+}
+
+// Inicializa el input de fecha (mínimo hoy) y dispara la primera carga de horarios
+function setupResFechaInput() {
+  const fechaInput = document.getElementById("resFechaInput");
+  if (!fechaInput) return;
+  const today = new Date().toISOString().split("T")[0];
+  fechaInput.setAttribute("min", today);
+  if (!fechaInput.value) {
+    fechaInput.value = today;
+  }
+  onResFechaChange();
+}
+
+function onResFechaChange() {
+  const fechaInput = document.getElementById("resFechaInput");
+  const validezEl = document.getElementById("resFechaValidez");
+  const hiddenFecha = document.getElementById("resFecha");
+  const step2Next = document.getElementById("resStep2Next");
+
+  const value = fechaInput?.value || "";
+  const today = new Date().toISOString().split("T")[0];
+
+  if (!value || value < today) {
+    if (validezEl) {
+      validezEl.className = "fecha-validez invalida";
+      validezEl.innerHTML =
+        '<i class="bi bi-x-circle-fill"></i> Elige una fecha igual o posterior a hoy';
+    }
+    if (hiddenFecha) hiddenFecha.value = "";
+    if (step2Next) step2Next.disabled = true;
+    resetHorariosUI();
+    return;
+  }
+
+  if (validezEl) {
+    validezEl.className = "fecha-validez valida";
+    validezEl.innerHTML = '<i class="bi bi-check-circle-fill"></i> Fecha válida';
+  }
+  if (hiddenFecha) hiddenFecha.value = value;
+
+  // Cambiar de fecha invalida la hora y mesa ya elegidas
+  const hiddenHora = document.getElementById("resHora");
+  if (hiddenHora) hiddenHora.value = "";
+  selectedTable = null;
+  if (step2Next) step2Next.disabled = true;
+
+  loadReservationHours();
+}
+
+function resetHorariosUI() {
+  const wrap = document.getElementById("resHorariosWrap");
+  const vacio = document.getElementById("resHorariosVacio");
+  const loading = document.getElementById("resHorariosLoading");
+  if (wrap) wrap.classList.add("d-none");
+  if (vacio) vacio.classList.remove("d-none");
+  if (loading) loading.classList.add("d-none");
+}
+
+// Consulta al backend los horarios realmente disponibles (considerando
+// mesas libres) para la sucursal y fecha elegidas, y los pinta como botones
+// agrupados en Mañana / Tarde.
+async function loadReservationHours() {
+  const sucursal = document.getElementById("resSucursal")?.value;
+  const fecha = document.getElementById("resFecha")?.value;
+
+  const loading = document.getElementById("resHorariosLoading");
+  const wrap = document.getElementById("resHorariosWrap");
+  const vacio = document.getElementById("resHorariosVacio");
+  const resumen = document.getElementById("resHorariosResumen");
+  const grupoManana = document.querySelector("#resHorariosManana .res-hour-buttons");
+  const grupoTarde = document.querySelector("#resHorariosTarde .res-hour-buttons");
+
+  if (!sucursal || !fecha) {
+    resetHorariosUI();
+    return;
+  }
+
+  if (vacio) vacio.classList.add("d-none");
+  if (wrap) wrap.classList.add("d-none");
+  if (loading) loading.classList.remove("d-none");
+
+  try {
+    const url = `${CONFIG.API_URL}?action=getAvailableHours&sucursal=${encodeURIComponent(sucursal)}&fecha=${encodeURIComponent(fecha)}`;
+    const response = await fetch(url, { method: "GET", redirect: "follow" });
+    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+    const result = await response.json();
+
+    const horas = result && result.success ? result.horas || [] : [];
+
+    if (loading) loading.classList.add("d-none");
+
+    if (!horas.length) {
+      if (resumen)
+        resumen.innerHTML =
+          '<span class="text-danger">No hay horarios disponibles para esta fecha. Intenta con otro día.</span>';
+      if (grupoManana) grupoManana.innerHTML = "";
+      if (grupoTarde) grupoTarde.innerHTML = "";
+      if (wrap) wrap.classList.remove("d-none");
+      return;
+    }
+
+    const manana = horas.filter((h) => parseInt(h.split(":")[0]) < 13);
+    const tarde = horas.filter((h) => parseInt(h.split(":")[0]) >= 13);
+
+    const renderBtn = (h) =>
+      `<button type="button" class="res-hour-btn" data-hora="${h}">${h}</button>`;
+
+    if (grupoManana) {
+      grupoManana.innerHTML = manana.map(renderBtn).join("");
+      document
+        .getElementById("resHorariosManana")
+        .classList.toggle("d-none", manana.length === 0);
+    }
+    if (grupoTarde) {
+      grupoTarde.innerHTML = tarde.map(renderBtn).join("");
+      document
+        .getElementById("resHorariosTarde")
+        .classList.toggle("d-none", tarde.length === 0);
+    }
+
+    // Listeners de selección de hora
+    document.querySelectorAll("#resHorariosWrap .res-hour-btn").forEach((btn) => {
+      btn.addEventListener("click", () => selectResHora(btn.getAttribute("data-hora")));
+    });
+
+    const hoyStr = new Date().toISOString().split("T")[0];
+    const etiquetaFecha = fecha === hoyStr ? "hoy" : `el ${fecha}`;
+    if (resumen) {
+      resumen.innerHTML = `<i class="bi bi-check-circle text-success"></i> ${horas.length} horarios disponibles para ${etiquetaFecha}`;
+    }
+
+    if (wrap) wrap.classList.remove("d-none");
+  } catch (error) {
+    if (loading) loading.classList.add("d-none");
+    if (resumen) {
+      resumen.innerHTML = `<span class="text-danger">Error al consultar horarios: ${error.message}</span>`;
+    }
+    if (wrap) wrap.classList.remove("d-none");
+    console.error("Error en loadReservationHours:", error);
+  }
+}
+
+function selectResHora(hora) {
+  const hiddenHora = document.getElementById("resHora");
+  if (hiddenHora) hiddenHora.value = hora;
+
+  document.querySelectorAll("#resHorariosWrap .res-hour-btn").forEach((btn) => {
+    btn.classList.toggle("selected", btn.getAttribute("data-hora") === hora);
+  });
+
+  const step2Next = document.getElementById("resStep2Next");
+  if (step2Next) step2Next.disabled = false;
 }
 
 async function loadAvailableTables() {
@@ -575,76 +815,75 @@ async function loadAvailableTables() {
   }
 
   container.innerHTML = "";
+  container.classList.add("d-none");
   loading.classList.remove("d-none");
 
   try {
-    const result = await API.getAvailableTables(sucursal, fecha, hora);
+    // --- LLAMADA DIRECTA A LA API ---
+    const url = `${CONFIG.API_URL}?action=getAvailableTables&sucursal=${encodeURIComponent(sucursal)}&fecha=${encodeURIComponent(fecha)}&hora=${encodeURIComponent(hora)}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`);
+    }
+
+    const result = await response.json();
+
     loading.classList.add("d-none");
 
-    if (!result.success) {
-      container.innerHTML = `<p class="text-danger text-center">${result.error}</p>`;
+    let mesas = [];
+    if (result.success === true && result.mesas) {
+      mesas = result.mesas;
+    } else if (Array.isArray(result)) {
+      mesas = result;
+    }
+
+    if (result.error || result.status === "error") {
+      const errorMsg =
+        result.error || result.message || "Error al cargar mesas";
+      container.innerHTML = `<p class="text-danger text-center">${errorMsg}</p>`;
       container.classList.remove("d-none");
       return;
     }
 
-    if (!result.mesas || result.mesas.length === 0) {
+    if (!mesas || mesas.length === 0) {
       container.innerHTML =
-        '<p class="text-muted text-center">No hay mesas disponibles en esta sucursal</p>';
+        '<p class="text-muted text-center">No hay mesas disponibles en esta sucursal para la fecha y hora seleccionada</p>';
       container.classList.remove("d-none");
       return;
     }
 
-    // Renderizar mesas
-    container.innerHTML = result.mesas
+    // --- RENDERIZAR MESAS ---
+    container.innerHTML = mesas
       .map(
         (mesa) => `
-            <div class="floor-table-card ${mesa.disponible ? "available" : "reserved"} 
-                 ${!mesa.disponible ? "cursor-not-allowed" : ""}"
-                 data-mesa="${mesa.nombre}"
-                 data-capacidad="${mesa.capacidad}"
-                 onclick="${mesa.disponible ? `selectTable('${mesa.nombre}', ${mesa.capacidad})` : ""}">
-                <div class="table-name">${mesa.nombre}</div>
-                <div class="table-capacity"><i class="bi bi-people"></i> ${mesa.capacidad}</div>
-                ${
-                  mesa.disponible
-                    ? `<div class="table-status" style="color:#2e7d32;">✓ Disponible</div>`
-                    : `<div class="table-status" style="color:#c62828;">✗ Reservada</div>
-                     ${
-                       mesa.horaLiberacion
-                         ? `<div class="table-timer">Libera ~${new Date(mesa.horaLiberacion).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</div>`
-                         : ""
-                     }`
-                }
-            </div>
-        `,
+        <div class="floor-table-card ${mesa.disponible ? "available" : "reserved"}
+             ${!mesa.disponible ? "cursor-not-allowed" : ""}"
+             data-mesa="${mesa.nombre}"
+             data-capacidad="${mesa.capacidad}"
+             onclick="${mesa.disponible ? `selectTable('${mesa.nombre}', ${mesa.capacidad})` : ""}">
+            <div class="table-name">${mesa.nombre}</div>
+            <div class="table-capacity"><i class="bi bi-people"></i> ${mesa.capacidad}</div>
+            ${
+              mesa.disponible
+                ? `<div class="table-status" style="color:#2e7d32;">✓ Disponible</div>`
+                : `<div class="table-status" style="color:#c62828;">✗ ${mesa.mensaje || "Reservada"}</div>`
+            }
+        </div>
+    `,
       )
       .join("");
 
     container.classList.remove("d-none");
-
-    // Actualizar selector de mesas
-    const selectMesa = document.getElementById("resMesaSelect");
-    if (selectMesa) {
-      const disponibles = result.mesas.filter((m) => m.disponible);
-      selectMesa.innerHTML =
-        '<option value="">— Elige una mesa —</option>' +
-        disponibles
-          .map(
-            (m) =>
-              `<option value="${m.nombre}" data-capacidad="${m.capacidad}">${m.nombre} (${m.capacidad} pers.)</option>`,
-          )
-          .join("");
-      selectMesa.onchange = function () {
-        const option = this.options[this.selectedIndex];
-        if (option && option.value) {
-          selectTable(option.value, parseInt(option.dataset.capacidad));
-        }
-      };
-    }
   } catch (error) {
     loading.classList.add("d-none");
     container.innerHTML = `<p class="text-danger text-center">Error al cargar mesas: ${error.message}</p>`;
     container.classList.remove("d-none");
+    console.error("Error en loadAvailableTables:", error);
   }
 }
 
@@ -656,11 +895,8 @@ function selectTable(mesa, capacidad) {
     el.classList.toggle("selected", el.dataset.mesa === mesa);
   });
 
-  // Actualizar selector
-  const select = document.getElementById("resMesaSelect");
-  if (select) {
-    select.value = mesa;
-  }
+  const hiddenMesa = document.getElementById("resMesaSelect");
+  if (hiddenMesa) hiddenMesa.value = mesa;
 
   // Actualizar info
   const info = document.getElementById("resMesaInfo");
@@ -676,6 +912,9 @@ function selectTable(mesa, capacidad) {
       personasInput.value = capacidad;
     }
   }
+
+  const step3Next = document.getElementById("resStep3Next");
+  if (step3Next) step3Next.disabled = false;
 }
 
 async function submitReservation(e) {
@@ -690,6 +929,7 @@ async function submitReservation(e) {
 
   if (!selectedTable) {
     alert("Por favor selecciona una mesa disponible");
+    goToResStep(3);
     return;
   }
 
@@ -777,4 +1017,130 @@ function showReservationSuccessModal(result) {
   const modalEl = document.getElementById("reservationSuccessModal");
   const modal = new bootstrap.Modal(modalEl);
   modal.show();
+}
+
+// ==========================================================================
+// FECHA Y HORA DE ENTREGA DEL PEDIDO — mismo estilo de fecha validada +
+// botones de horario que la reservación, pero sin mesa (solo disponibilidad
+// dentro del horario de atención del restaurante).
+// ==========================================================================
+
+function generarFranjasHorario(inicioMin, finMin, pasoMin) {
+  const franjas = [];
+  for (let m = inicioMin; m <= finMin; m += pasoMin) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    franjas.push(String(h).padStart(2, "0") + ":" + String(min).padStart(2, "0"));
+  }
+  return franjas;
+}
+
+function setupDeliveryDateTimePicker() {
+  const dateInput = document.getElementById("deliveryDateInput");
+  if (!dateInput) return;
+
+  const today = new Date().toISOString().split("T")[0];
+  dateInput.setAttribute("min", today);
+  if (!dateInput.value) dateInput.value = today;
+
+  dateInput.removeEventListener("change", onDeliveryDateChange);
+  dateInput.addEventListener("change", onDeliveryDateChange);
+
+  onDeliveryDateChange();
+}
+
+function onDeliveryDateChange() {
+  const dateInput = document.getElementById("deliveryDateInput");
+  const validezEl = document.getElementById("deliveryDateValidez");
+  const hiddenDate = document.getElementById("deliveryDate");
+  const hiddenTime = document.getElementById("deliveryTime");
+
+  const value = dateInput?.value || "";
+  const today = new Date().toISOString().split("T")[0];
+
+  if (!value || value < today) {
+    if (validezEl) {
+      validezEl.className = "fecha-validez invalida";
+      validezEl.innerHTML =
+        '<i class="bi bi-x-circle-fill"></i> Elige una fecha igual o posterior a hoy';
+    }
+    if (hiddenDate) hiddenDate.value = "";
+    if (hiddenTime) hiddenTime.value = "";
+    const wrap = document.getElementById("deliveryHorariosWrap");
+    const vacio = document.getElementById("deliveryHorariosVacio");
+    if (wrap) wrap.classList.add("d-none");
+    if (vacio) vacio.classList.remove("d-none");
+    return;
+  }
+
+  if (validezEl) {
+    validezEl.className = "fecha-validez valida";
+    validezEl.innerHTML = '<i class="bi bi-check-circle-fill"></i> Fecha válida';
+  }
+  if (hiddenDate) hiddenDate.value = value;
+  if (hiddenTime) hiddenTime.value = "";
+
+  renderDeliveryHours(value);
+}
+
+function renderDeliveryHours(fecha) {
+  const vacio = document.getElementById("deliveryHorariosVacio");
+  const wrap = document.getElementById("deliveryHorariosWrap");
+  const grupoManana = document.getElementById("deliveryHorariosManana");
+  const grupoTarde = document.getElementById("deliveryHorariosTarde");
+  const resumen = document.getElementById("deliveryHorariosResumen");
+
+  // Horario de atención: 9:00 a 21:00, franjas cada 30 minutos
+  let franjas = generarFranjasHorario(9 * 60, 21 * 60, 30);
+
+  const today = new Date().toISOString().split("T")[0];
+  if (fecha === today) {
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    franjas = franjas.filter((h) => {
+      const m = parseInt(h.split(":")[0]) * 60 + parseInt(h.split(":")[1]);
+      return m >= nowMinutes + 30;
+    });
+  }
+
+  if (vacio) vacio.classList.add("d-none");
+
+  if (!franjas.length) {
+    if (resumen)
+      resumen.innerHTML =
+        '<span class="text-danger">No hay horarios disponibles para hoy. Intenta con otra fecha.</span>';
+    if (grupoManana) grupoManana.innerHTML = "";
+    if (grupoTarde) grupoTarde.innerHTML = "";
+    if (wrap) wrap.classList.remove("d-none");
+    return;
+  }
+
+  const manana = franjas.filter((h) => parseInt(h.split(":")[0]) < 13);
+  const tarde = franjas.filter((h) => parseInt(h.split(":")[0]) >= 13);
+
+  const renderBtn = (h) =>
+    `<button type="button" class="res-hour-btn" data-hora="${h}">${h}</button>`;
+
+  if (grupoManana) grupoManana.innerHTML = manana.map(renderBtn).join("");
+  if (grupoTarde) grupoTarde.innerHTML = tarde.map(renderBtn).join("");
+
+  document.querySelectorAll("#deliveryHorariosWrap .res-hour-btn").forEach((btn) => {
+    btn.addEventListener("click", () => selectDeliveryHora(btn.getAttribute("data-hora")));
+  });
+
+  const etiquetaFecha = fecha === today ? "hoy" : `el ${fecha}`;
+  if (resumen) {
+    resumen.innerHTML = `<i class="bi bi-check-circle text-success"></i> ${franjas.length} horarios disponibles para ${etiquetaFecha}`;
+  }
+
+  if (wrap) wrap.classList.remove("d-none");
+}
+
+function selectDeliveryHora(hora) {
+  const hiddenTime = document.getElementById("deliveryTime");
+  if (hiddenTime) hiddenTime.value = hora;
+
+  document.querySelectorAll("#deliveryHorariosWrap .res-hour-btn").forEach((btn) => {
+    btn.classList.toggle("selected", btn.getAttribute("data-hora") === hora);
+  });
 }

@@ -57,7 +57,7 @@ const RESERVATIONS_SHEET_NAME = "Reservaciones";
 const TABLES_SHEET_NAME = "Mesas";
 const RESERVATION_DURATION_MINUTES = 60; // Tiempo estimado por mesa (minutos)
 const RESERVATION_STATUSES = ["Confirmada", "Cancelada", "Completada"];
-const RESERVATION_MIN_ADVANCE_HOURS = 1; // Mínimo 1 hora de anticipación
+const RESERVATION_MIN_ADVANCE_HOURS = 0;
 
 /**
  * Sanea un valor antes de escribirlo en la hoja:
@@ -182,6 +182,24 @@ function doGet(e) {
 
       // Devolver directamente el resultado sin envolver en buildResponse
       // porque el frontend espera { success: true, mesas: [...] }
+      return ContentService.createTextOutput(
+        JSON.stringify(resultado),
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Permitir solicitudes GET para obtener las horas disponibles de una
+    // sucursal/fecha (usado por el nuevo selector de horario en botones del
+    // formulario público de reservaciones)
+    if (e && e.parameter && e.parameter.action === "getAvailableHours") {
+      const sucursal = e.parameter.sucursal || "";
+      const fecha = e.parameter.fecha || "";
+      let resultado;
+      try {
+        const horas = getAvailableHours(sucursal, fecha);
+        resultado = { success: true, horas: horas };
+      } catch (error) {
+        resultado = { success: false, error: error.toString() };
+      }
       return ContentService.createTextOutput(
         JSON.stringify(resultado),
       ).setMimeType(ContentService.MimeType.JSON);
@@ -1377,6 +1395,12 @@ function handleRegistrarVisita(data) {
 /**
  * Obtiene o crea la hoja de Reservaciones
  */
+/**
+ * Obtiene o crea la hoja de Reservaciones en el Spreadsheet activo.
+ * Retorna siempre la instancia de la hoja (Sheet) para operaciones de I/O.
+ * 
+ * @return {GoogleAppsScript.Spreadsheet.Sheet} Instancia de la hoja de reservaciones.
+ */
 function getReservationsSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(RESERVATIONS_SHEET_NAME);
@@ -1387,7 +1411,7 @@ function getReservationsSheet_() {
       "ID",
       "Sucursal",
       "Cliente",
-      "Telefono",
+      "Teléfono",
       "Fecha",
       "Hora",
       "Mesa",
@@ -1397,8 +1421,10 @@ function getReservationsSheet_() {
       "Notas",
       "Timestamp",
       "TiempoEstimado",
-      "HoraLiberacion",
+      "HoraLiberacion"
     ];
+    
+    // Encabezados con formato inicial
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
     sheet.setFrozenRows(1);
@@ -1445,13 +1471,22 @@ function getTablesSheet_() {
 }
 
 /**
- * Verifica si una mesa está disponible en una fecha y hora específicas
+ * Verifica si una mesa está disponible en una fecha y hora específicas.
+ *
+ * BUGFIX: antes esta función solo comparaba la hora de forma EXACTA
+ * (rowHora === hora), así que si una reservación era a las 14:00 con 60 min
+ * de ocupación, una nueva reservación a las 14:15 o 14:30 se aceptaba como
+ * "disponible" aunque la mesa siguiera ocupada — es decir, nunca se validaba
+ * el rango real de la reservación, solo el minuto exacto. Ahora se calcula
+ * el rango de ocupación real (hora de inicio → hora de inicio + duración) de
+ * cada reservación existente y se verifica si se traslapa con el rango
+ * solicitado.
  */
 function verificarDisponibilidadMesa(sucursal, mesa, fecha, hora, excluirId) {
   const sheet = getReservationsSheet_();
   const values = sheet.getDataRange().getValues();
 
-  const horaDate = new Date(fecha + "T" + hora);
+  const horaDate = new Date(fecha + "T" + hora + ":00");
   if (isNaN(horaDate.getTime())) {
     return {
       disponible: false,
@@ -1461,6 +1496,21 @@ function verificarDisponibilidadMesa(sucursal, mesa, fecha, hora, excluirId) {
   }
 
   const ahora = new Date();
+  const todayStr = Utilities.formatDate(ahora, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  
+  // Si es hoy, no permitir horas pasadas
+  if (fecha === todayStr) {
+    const nowMinutes = ahora.getHours() * 60 + ahora.getMinutes();
+    const hourMinutes = parseInt(hora.split(":")[0]) * 60 + parseInt(hora.split(":")[1] || 0);
+    if (hourMinutes < nowMinutes + 30) {
+      return {
+        disponible: false,
+        mensaje: "No se pueden reservar horas pasadas",
+        reservacionExistente: null,
+      };
+    }
+  }
+
   const diffHoras = (horaDate.getTime() - ahora.getTime()) / (1000 * 60 * 60);
   if (diffHoras < RESERVATION_MIN_ADVANCE_HOURS) {
     return {
@@ -1470,49 +1520,44 @@ function verificarDisponibilidadMesa(sucursal, mesa, fecha, hora, excluirId) {
     };
   }
 
+  // Rango de ocupación que solicita esta nueva reservación
+  const nuevoInicio = horaDate.getTime();
+  const nuevoFin = nuevoInicio + RESERVATION_DURATION_MINUTES * 60 * 1000;
+
+  // Verificar traslape con cualquier reservación existente de la misma mesa
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
     const id = String(row[0] || "");
     const rowSucursal = String(row[1] || "");
     const rowMesa = String(row[6] || "");
     const rowEstado = String(row[9] || "");
-    const rowFecha = String(row[4] || "");
-    const rowHora = String(row[5] || "");
+    const rowFecha = normalizeDate(row[4]);
+    const rowHora = normalizeTime(row[5]);
     const rowHoraLiberacion = row[13];
+    const rowDuracion = Number(row[12]) || RESERVATION_DURATION_MINUTES;
 
     if (excluirId && id === excluirId) continue;
     if (rowEstado !== "Confirmada") continue;
     if (rowSucursal !== sucursal || rowMesa !== mesa) continue;
     if (rowFecha !== fecha) continue;
 
-    const reservaHora = new Date(rowFecha + "T" + rowHora);
-    if (isNaN(reservaHora.getTime())) continue;
+    const existenteInicioDate = new Date(rowFecha + "T" + rowHora + ":00");
+    if (isNaN(existenteInicioDate.getTime())) continue;
+    const existenteInicio = existenteInicioDate.getTime();
+    const existenteFin = existenteInicio + rowDuracion * 60 * 1000;
 
-    const diffMinutos =
-      (horaDate.getTime() - reservaHora.getTime()) / (1000 * 60);
-    const duracionReserva = row[12] || RESERVATION_DURATION_MINUTES;
+    // Traslape de rangos: [nuevoInicio, nuevoFin) vs [existenteInicio, existenteFin)
+    const seTraslapan = nuevoInicio < existenteFin && existenteInicio < nuevoFin;
 
-    if (Math.abs(diffMinutos) < duracionReserva) {
-      const horaLiberacion = rowHoraLiberacion
-        ? new Date(rowHoraLiberacion)
-        : null;
-      let mensaje = `La mesa ya está reservada`;
-      if (horaLiberacion) {
-        const liberacionStr = Utilities.formatDate(
-          horaLiberacion,
-          Session.getScriptTimeZone(),
-          "HH:mm",
-        );
-        mensaje += ` (se libera aproximadamente a las ${liberacionStr} hrs)`;
-      }
+    if (seTraslapan) {
       return {
         disponible: false,
-        mensaje: mensaje,
+        mensaje: `La mesa está ocupada de las ${rowHora} a las ${Utilities.formatDate(new Date(existenteFin), Session.getScriptTimeZone(), "HH:mm")} hrs`,
         reservacionExistente: {
           id: id,
           cliente: String(row[2] || ""),
           hora: rowHora,
-          horaLiberacion: horaLiberacion,
+          horaLiberacion: rowHoraLiberacion,
         },
       };
     }
@@ -1718,8 +1763,8 @@ function crearReservacion(data) {
     sucursal,
     cliente,
     "'" + telefono,
-    fecha,
-    hora,
+    "'" + fecha,
+    "'" + hora,
     mesa,
     mesaConfig.capacidad,
     personas,
@@ -1822,6 +1867,9 @@ function handleCrearReservacion(data) {
 /**
  * Obtiene todas las reservaciones para el panel admin
  */
+/**
+ * Obtiene todas las reservaciones para el panel admin
+ */
 function adminGetReservations(token, filtros) {
   validateToken_(token);
   filtros = filtros || {};
@@ -1832,54 +1880,41 @@ function adminGetReservations(token, filtros) {
 
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
-    if (!row[0]) continue;
+    if (!row[0] && row[0] !== 0) continue; // ID vacío
 
+    // Leer todos los campos con sus índices correctos
     const reserva = {
-      id: String(row[0]),
+      id: String(row[0] || ""),
       sucursal: String(row[1] || ""),
       cliente: String(row[2] || ""),
       telefono: String(row[3] || ""),
-      fecha: String(row[4] || ""),
-      hora: String(row[5] || ""),
+      fecha: normalizeDate(row[4]),
+      hora: normalizeTime(row[5]),
       mesa: String(row[6] || ""),
       capacidad: Number(row[7]) || 0,
       personas: Number(row[8]) || 0,
       estado: String(row[9] || "Confirmada"),
       notas: String(row[10] || ""),
       timestamp: row[11],
-      tiempoEstimado: Number(row[12]) || RESERVATION_DURATION_MINUTES,
-      horaLiberacion: row[13],
+      tiempoEstimado: Number(row[12]) || 60,
+      horaLiberacion: row[13] || "",
       rowIndex: i + 1,
     };
 
-    if (
-      filtros.sucursal &&
-      filtros.sucursal !== "all" &&
-      reserva.sucursal !== filtros.sucursal
-    )
-      continue;
-    if (
-      filtros.estado &&
-      filtros.estado !== "all" &&
-      reserva.estado !== filtros.estado
-    )
-      continue;
+    // Aplicar filtros
+    if (filtros.sucursal && filtros.sucursal !== "all" && reserva.sucursal !== filtros.sucursal) continue;
+    if (filtros.estado && filtros.estado !== "all" && reserva.estado !== filtros.estado) continue;
     if (filtros.fecha && reserva.fecha !== filtros.fecha) continue;
     if (filtros.busqueda) {
       const q = String(filtros.busqueda).toLowerCase();
-      const haystack = (
-        reserva.cliente +
-        " " +
-        reserva.telefono +
-        " " +
-        reserva.mesa
-      ).toLowerCase();
+      const haystack = (reserva.cliente + " " + reserva.telefono + " " + reserva.mesa).toLowerCase();
       if (!haystack.includes(q)) continue;
     }
 
     reservaciones.push(reserva);
   }
 
+  // Ordenar por fecha y hora
   reservaciones.sort((a, b) => {
     const fechaA = new Date(a.fecha + "T" + a.hora);
     const fechaB = new Date(b.fecha + "T" + b.hora);
@@ -2097,4 +2132,220 @@ function doPost(e) {
     console.error("Error en doPost:", err);
     return buildResponse({ error: err.toString() }, false);
   }
+}
+
+// ==========================================================================
+// RESERVACIONES - Funciones de Backend (MEJORADAS)
+// ==========================================================================
+
+/**
+ * Obtiene las horas disponibles para una fecha y sucursal específicas
+ * Retorna un array de horas en formato "HH:mm" que están disponibles
+ *
+ * BUGFIX: antes se marcaba una hora como "no disponible" si CUALQUIER mesa
+ * de la sucursal tenía una reservación a esa hora exacta — es decir, una
+ * sola mesa ocupada bloqueaba el horario para TODAS las mesas de la
+ * sucursal. Ahora una hora se considera disponible si existe AL MENOS UNA
+ * mesa libre en ese horario (usando el traslape real de 60 minutos, no la
+ * coincidencia exacta de minuto). Además ahora genera franjas cada 30
+ * minutos en vez de solo en punto.
+ */
+function getAvailableHours(sucursal, fecha) {
+  if (!sucursal || !fecha) {
+    return [];
+  }
+
+  const now = new Date();
+  const todayStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  // Horario de atención: 9:00 a 21:00. Última hora reservable: 20:00
+  // (para que la ocupación de 60 min termine antes del cierre).
+  const OPEN_MIN = 9 * 60;
+  const CLOSE_MIN = 21 * 60;
+  const lastStartMin = CLOSE_MIN - RESERVATION_DURATION_MINUTES;
+
+  const allSlots = [];
+  for (let m = OPEN_MIN; m <= lastStartMin; m += 30) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    allSlots.push(String(h).padStart(2, "0") + ":" + String(min).padStart(2, "0"));
+  }
+
+  const mesasSucursal = obtenerMesasConfiguracion_(sucursal).filter((m) => m.activa);
+  // Si no hay mesas configuradas para la sucursal, usar el total por defecto
+  // (obtenerMesasConDisponibilidad ya resuelve ese caso internamente)
+  const totalMesas = mesasSucursal.length > 0 ? mesasSucursal.length : 6;
+
+  const availableHours = allSlots.filter((hour) => {
+    // Si es hoy, no permitir horas ya pasadas (con 30 min de margen)
+    if (fecha === todayStr) {
+      const hourMinutes = parseInt(hour.split(":")[0]) * 60 + parseInt(hour.split(":")[1]);
+      if (hourMinutes < currentMinutes + 30) return false;
+    }
+
+    // Disponible si al menos una mesa está libre en ese horario
+    const mesasConDisponibilidad = obtenerMesasConDisponibilidad(sucursal, fecha, hour);
+    return mesasConDisponibilidad.some((m) => m.disponible);
+  });
+
+  return availableHours;
+}
+
+/**
+ * Obtiene las reservaciones del día para una sucursal específica
+ */
+function getReservationsForDay(sucursal, fecha) {
+  if (!sucursal || !fecha) {
+    return [];
+  }
+  
+  const sheet = getReservationsSheet_();
+  const values = sheet.getDataRange().getValues();
+  const reservaciones = [];
+  
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    if (!row[0]) continue;
+    
+    const rowSucursal = String(row[1] || "");
+    const rowFecha = normalizeDate(row[4]);
+    
+    if (rowSucursal === sucursal && rowFecha === fecha) {
+      reservaciones.push({
+        id: String(row[0]),
+        sucursal: rowSucursal,
+        cliente: String(row[2] || ""),
+        telefono: String(row[3] || ""),
+        fecha: rowFecha,
+        hora: normalizeTime(row[5]),
+        mesa: String(row[6] || ""),
+        capacidad: Number(row[7]) || 0,
+        personas: Number(row[8]) || 0,
+        estado: String(row[9] || "Confirmada"),
+        notas: String(row[10] || ""),
+        timestamp: row[11],
+        horaLiberacion: row[13]
+      });
+    }
+  }
+  
+  // Ordenar por hora
+  reservaciones.sort((a, b) => {
+    if (a.hora < b.hora) return -1;
+    if (a.hora > b.hora) return 1;
+    return 0;
+  });
+  
+  return reservaciones;
+}
+
+/**
+ * Obtiene mesas disponibles para una fecha y hora específicas
+ * (versión mejorada con validación de hora)
+ */
+function getAvailableTablesWithHours(sucursal, fecha, hora) {
+  if (!sucursal || !fecha || !hora) {
+    return { success: false, error: "Faltan parámetros" };
+  }
+  
+  // Validar que la hora esté en el rango permitido
+  const hourNum = parseInt(hora.split(":")[0]);
+  if (hourNum < 9 || hourNum > 21) {
+    return { success: false, error: "Horario de atención: 9:00 AM a 9:00 PM" };
+  }
+  
+  // Validar que no sea una hora pasada (si es hoy)
+  const now = new Date();
+  const todayStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  if (fecha === todayStr) {
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const hourMinutes = hourNum * 60;
+    if (hourMinutes < nowMinutes + 30) {
+      return { success: false, error: "No se pueden reservar horas pasadas" };
+    }
+  }
+  
+  const mesas = obtenerMesasConDisponibilidad(sucursal, fecha, hora);
+  return { success: true, mesas: mesas };
+}
+
+/**
+ * Obtiene la configuración de mesas desde la hoja "Mesas"
+ * para que el panel administrativo pueda mostrarlas
+ */
+function adminGetMesasConfig(token) {
+  validateToken_(token);
+  
+  const sheet = getTablesSheet_();
+  const values = sheet.getDataRange().getValues();
+  const mesas = [];
+  
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    if (!row[0]) continue; // Sucursal vacía
+    
+    mesas.push({
+      sucursal: String(row[0] || ""),
+      mesa: String(row[1] || ""),
+      nombre: String(row[1] || ""),
+      capacidad: Number(row[2]) || 4,
+      activa: row[3] === true || row[3] === "TRUE"
+    });
+  }
+  
+  return mesas;
+}
+
+/**
+ * ==========================================================================
+ * BUGFIX: las siguientes tres funciones ("getAvailableHours",
+ * "getReservationsForDay" y "getAvailableTablesWithHours") NO reciben un
+ * "token" como primer parámetro porque también las usa el sitio público
+ * (sin sesión de admin) a través de doGet.
+ *
+ * Admin.html sí las llamaba pasando "sessionToken" como primer argumento
+ * (gasCall("getReservationsForDay", sessionToken, sucursal, fecha)), lo que
+ * hacía que adentro de la función "sucursal" recibiera en realidad el token
+ * y "fecha" recibiera la sucursal — nunca encontraba coincidencias y por eso
+ * el panel admin no mostraba ni las horas, ni la mesa, ni las reservaciones
+ * del día. Estas funciones "adminXxx" son las que debe llamar el panel
+ * (con el token correcto) y delegan en las funciones públicas de arriba.
+ * ==========================================================================
+ */
+function adminGetAvailableHours(token, sucursal, fecha) {
+  validateToken_(token);
+  return getAvailableHours(sucursal, fecha);
+}
+
+function adminGetReservationsForDay(token, sucursal, fecha) {
+  validateToken_(token);
+  return getReservationsForDay(sucursal, fecha);
+}
+
+function adminGetAvailableTablesWithHours(token, sucursal, fecha, hora) {
+  validateToken_(token);
+  return getAvailableTablesWithHours(sucursal, fecha, hora);
+}
+
+/**
+ * Crea una reservación desde el panel administrativo
+ */
+function adminCrearReservacion(token, data) {
+  validateToken_(token);
+  
+  // Validar campos requeridos
+  const required = ["sucursal", "cliente", "telefono", "fecha", "hora", "mesa", "personas"];
+  const missing = required.filter(field => !data[field] || data[field].trim() === "");
+  if (missing.length > 0) {
+    throw new Error(`Faltan campos: ${missing.join(", ")}`);
+  }
+  
+  // Usar la función existente de creación
+  const resultado = crearReservacion(data);
+  if (!resultado.success) {
+    throw new Error(resultado.error);
+  }
+  
+  return resultado;
 }

@@ -493,25 +493,41 @@
               <h6 class="fw-bold mb-3 border-bottom pb-2">
                 4. Programación y Notas
               </h6>
+              <div class="mb-3">
+                <label class="form-label">Fecha de Entrega *</label>
+                <input
+                  type="date"
+                  class="form-control form-control-lg"
+                  id="deliveryDateInput"
+                  required
+                />
+                <input type="hidden" id="deliveryDate" />
+                <div class="small mt-1" id="deliveryDateValidez"></div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label d-block">Hora aproximada de entrega *</label>
+                <input type="hidden" id="deliveryTime" />
+                <div id="deliveryHorariosLoading" class="text-muted small d-none">
+                  Calculando horarios disponibles...
+                </div>
+                <div id="deliveryHorariosWrap" class="d-none">
+                  <div class="res-hour-group">
+                    <div class="res-hour-group-label">Mañana</div>
+                    <div class="res-hour-buttons" id="deliveryHorariosManana"></div>
+                  </div>
+                  <div class="res-hour-group">
+                    <div class="res-hour-group-label">Tarde</div>
+                    <div class="res-hour-buttons" id="deliveryHorariosTarde"></div>
+                  </div>
+                  <div class="small mt-2 text-muted" id="deliveryHorariosResumen"></div>
+                </div>
+                <div id="deliveryHorariosVacio" class="text-muted small">
+                  Elige una fecha para ver los horarios disponibles.
+                </div>
+              </div>
+
               <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                  <label class="form-label">Fecha de Entrega *</label>
-                  <input
-                    type="date"
-                    class="form-control"
-                    id="deliveryDate"
-                    required
-                  />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Hora Aproximada *</label>
-                  <input
-                    type="time"
-                    class="form-control"
-                    id="deliveryTime"
-                    required
-                  />
-                </div>
                 <div class="col-12">
                   <label class="form-label">Notas para tu pedido</label>
                   <textarea

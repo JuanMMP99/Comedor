@@ -83,6 +83,13 @@ const API = {
     return this.fetch("getAvailableTables", params);
   },
 
+  // Devuelve los horarios disponibles (considerando mesas libres) para una
+  // sucursal y fecha. Usado por el nuevo selector de horario en botones.
+  async getAvailableHours(sucursal, fecha) {
+    const params = { sucursal, fecha };
+    return this.fetch("getAvailableHours", params);
+  },
+
   async crearReservacion(data) {
     return this.post("crearReservacion", data);
   },
