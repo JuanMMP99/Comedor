@@ -410,8 +410,8 @@ function setupFormHandler() {
     } catch (error) {
       alert(
         "Ocurrió un inconveniente al guardar tu pedido: " +
-          error.message +
-          ". Por favor, inténtalo de nuevo.",
+        error.message +
+        ". Por favor, inténtalo de nuevo.",
       );
     } finally {
       // Restaurar UI del botón
@@ -711,8 +711,13 @@ async function loadReservationHours() {
   const wrap = document.getElementById("resHorariosWrap");
   const vacio = document.getElementById("resHorariosVacio");
   const resumen = document.getElementById("resHorariosResumen");
-  const grupoManana = document.querySelector("#resHorariosManana .res-hour-buttons");
-  const grupoTarde = document.querySelector("#resHorariosTarde .res-hour-buttons");
+
+  // Obtener contenedores directamente
+  const mananaContainer = document.getElementById("resHorariosManana");
+  const tardeContainer = document.getElementById("resHorariosTarde");
+
+  const grupoManana = mananaContainer?.querySelector(".res-hour-buttons") || mananaContainer;
+  const grupoTarde = tardeContainer?.querySelector(".res-hour-buttons") || tardeContainer;
 
   if (!sucursal || !fecha) {
     resetHorariosUI();
@@ -739,6 +744,8 @@ async function loadReservationHours() {
           '<span class="text-danger">No hay horarios disponibles para esta fecha. Intenta con otro día.</span>';
       if (grupoManana) grupoManana.innerHTML = "";
       if (grupoTarde) grupoTarde.innerHTML = "";
+      if (mananaContainer) mananaContainer.classList.add("d-none");
+      if (tardeContainer) tardeContainer.classList.add("d-none");
       if (wrap) wrap.classList.remove("d-none");
       return;
     }
@@ -751,18 +758,19 @@ async function loadReservationHours() {
 
     if (grupoManana) {
       grupoManana.innerHTML = manana.map(renderBtn).join("");
-      document
-        .getElementById("resHorariosManana")
-        .classList.toggle("d-none", manana.length === 0);
     }
-    if (grupoTarde) {
-      grupoTarde.innerHTML = tarde.map(renderBtn).join("");
-      document
-        .getElementById("resHorariosTarde")
-        .classList.toggle("d-none", tarde.length === 0);
+    if (mananaContainer) {
+      mananaContainer.classList.toggle("d-none", manana.length === 0);
     }
 
-    // Listeners de selección de hora
+    if (grupoTarde) {
+      grupoTarde.innerHTML = tarde.map(renderBtn).join("");
+    }
+    if (tardeContainer) {
+      tardeContainer.classList.toggle("d-none", tarde.length === 0);
+    }
+
+    // Registrar eventos de clic para la selección de hora
     document.querySelectorAll("#resHorariosWrap .res-hour-btn").forEach((btn) => {
       btn.addEventListener("click", () => selectResHora(btn.getAttribute("data-hora")));
     });
@@ -868,11 +876,10 @@ async function loadAvailableTables() {
              onclick="${mesa.disponible ? `selectTable('${mesa.nombre}', ${mesa.capacidad})` : ""}">
             <div class="table-name">${mesa.nombre}</div>
             <div class="table-capacity"><i class="bi bi-people"></i> ${mesa.capacidad}</div>
-            ${
-              mesa.disponible
-                ? `<div class="table-status" style="color:#2e7d32;">✓ Disponible</div>`
-                : `<div class="table-status" style="color:#c62828;">✗ ${mesa.mensaje || "Reservada"}</div>`
-            }
+            ${mesa.disponible
+            ? `<div class="table-status" style="color:#2e7d32;">✓ Disponible</div>`
+            : `<div class="table-status" style="color:#c62828;">✗ ${mesa.mensaje || "Reservada"}</div>`
+          }
         </div>
     `,
       )

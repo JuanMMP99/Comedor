@@ -205,6 +205,17 @@ function doGet(e) {
       ).setMimeType(ContentService.MimeType.JSON);
     }
 
+    function obtenerHorariosDisponibles(sucursal, fecha) {
+      // Lógica para consultar la hoja de cálculo o calcular horarios
+      const horariosBase = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "18:00", "19:00", "20:00"];
+
+      // Aquí puedes filtrar por reservaciones existentes en tu hoja de Google Sheets
+      return {
+        success: true,
+        horas: horariosBase
+      };
+    }
+
     if (!e || !e.parameter) {
       return buildResponse(
         {
@@ -413,14 +424,13 @@ function handleCrearPedido(data) {
                     <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Cliente:</td><td style="padding: 8px;">${cliente}</td></tr>
                     <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Teléfono:</td><td style="padding: 8px;">${telefono}</td></tr>
                     <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Modalidad:</td><td style="padding: 8px;">${tipoEntrega === "envio" ? "Envío a Domicilio" : "Recoger en Tienda"}</td></tr>
-                    ${
-                      tipoEntrega === "envio"
-                        ? `
+                    ${tipoEntrega === "envio"
+        ? `
                     <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Destinatario:</td><td style="padding: 8px;">${destinatario} (${telefonoDestinatario})</td></tr>
                     <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Dirección:</td><td style="padding: 8px;">${direccion}${referencias ? " — " + referencias : ""}</td></tr>
                     `
-                        : ""
-                    }
+        : ""
+      }
                     <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Método de Pago:</td><td style="padding: 8px;">${metodoPago}</td></tr>
                     <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Fecha de Entrega:</td><td style="padding: 8px;">${fechaNorm} a las ${horaNorm} hrs</td></tr>
                     <tr><td style="padding: 8px; font-weight: bold; background-color: #f8f9fa;">Productos:</td><td style="padding: 8px;">${listaProductos}</td></tr>
@@ -685,8 +695,8 @@ function crearPrimerAdmin() {
   props.setProperty("SETUP_COMPLETE", "true");
   Logger.log(
     "Usuario administrador creado: " +
-      email +
-      " — ¡cambia la contraseña por defecto desde el panel!",
+    email +
+    " — ¡cambia la contraseña por defecto desde el panel!",
   );
 }
 
@@ -1180,11 +1190,11 @@ function adminExportPedidoPDF(token, uuid) {
   body
     .appendParagraph(
       "Generado el " +
-        Utilities.formatDate(
-          new Date(),
-          Session.getScriptTimeZone(),
-          "dd/MM/yyyy HH:mm",
-        ),
+      Utilities.formatDate(
+        new Date(),
+        Session.getScriptTimeZone(),
+        "dd/MM/yyyy HH:mm",
+      ),
     )
     .setItalic(true)
     .setFontSize(9);
@@ -1423,7 +1433,7 @@ function getReservationsSheet_() {
       "TiempoEstimado",
       "HoraLiberacion"
     ];
-    
+
     // Encabezados con formato inicial
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
@@ -1497,7 +1507,7 @@ function verificarDisponibilidadMesa(sucursal, mesa, fecha, hora, excluirId) {
 
   const ahora = new Date();
   const todayStr = Utilities.formatDate(ahora, Session.getScriptTimeZone(), "yyyy-MM-dd");
-  
+
   // Si es hoy, no permitir horas pasadas
   if (fecha === todayStr) {
     const nowMinutes = ahora.getHours() * 60 + ahora.getMinutes();
@@ -2199,18 +2209,18 @@ function getReservationsForDay(sucursal, fecha) {
   if (!sucursal || !fecha) {
     return [];
   }
-  
+
   const sheet = getReservationsSheet_();
   const values = sheet.getDataRange().getValues();
   const reservaciones = [];
-  
+
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
     if (!row[0]) continue;
-    
+
     const rowSucursal = String(row[1] || "");
     const rowFecha = normalizeDate(row[4]);
-    
+
     if (rowSucursal === sucursal && rowFecha === fecha) {
       reservaciones.push({
         id: String(row[0]),
@@ -2229,14 +2239,14 @@ function getReservationsForDay(sucursal, fecha) {
       });
     }
   }
-  
+
   // Ordenar por hora
   reservaciones.sort((a, b) => {
     if (a.hora < b.hora) return -1;
     if (a.hora > b.hora) return 1;
     return 0;
   });
-  
+
   return reservaciones;
 }
 
@@ -2248,13 +2258,13 @@ function getAvailableTablesWithHours(sucursal, fecha, hora) {
   if (!sucursal || !fecha || !hora) {
     return { success: false, error: "Faltan parámetros" };
   }
-  
+
   // Validar que la hora esté en el rango permitido
   const hourNum = parseInt(hora.split(":")[0]);
   if (hourNum < 9 || hourNum > 21) {
     return { success: false, error: "Horario de atención: 9:00 AM a 9:00 PM" };
   }
-  
+
   // Validar que no sea una hora pasada (si es hoy)
   const now = new Date();
   const todayStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd");
@@ -2265,7 +2275,7 @@ function getAvailableTablesWithHours(sucursal, fecha, hora) {
       return { success: false, error: "No se pueden reservar horas pasadas" };
     }
   }
-  
+
   const mesas = obtenerMesasConDisponibilidad(sucursal, fecha, hora);
   return { success: true, mesas: mesas };
 }
@@ -2276,15 +2286,15 @@ function getAvailableTablesWithHours(sucursal, fecha, hora) {
  */
 function adminGetMesasConfig(token) {
   validateToken_(token);
-  
+
   const sheet = getTablesSheet_();
   const values = sheet.getDataRange().getValues();
   const mesas = [];
-  
+
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
     if (!row[0]) continue; // Sucursal vacía
-    
+
     mesas.push({
       sucursal: String(row[0] || ""),
       mesa: String(row[1] || ""),
@@ -2293,7 +2303,7 @@ function adminGetMesasConfig(token) {
       activa: row[3] === true || row[3] === "TRUE"
     });
   }
-  
+
   return mesas;
 }
 
@@ -2333,19 +2343,19 @@ function adminGetAvailableTablesWithHours(token, sucursal, fecha, hora) {
  */
 function adminCrearReservacion(token, data) {
   validateToken_(token);
-  
+
   // Validar campos requeridos
   const required = ["sucursal", "cliente", "telefono", "fecha", "hora", "mesa", "personas"];
   const missing = required.filter(field => !data[field] || data[field].trim() === "");
   if (missing.length > 0) {
     throw new Error(`Faltan campos: ${missing.join(", ")}`);
   }
-  
+
   // Usar la función existente de creación
   const resultado = crearReservacion(data);
   if (!resultado.success) {
     throw new Error(resultado.error);
   }
-  
+
   return resultado;
 }
